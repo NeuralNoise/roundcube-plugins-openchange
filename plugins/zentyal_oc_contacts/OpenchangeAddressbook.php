@@ -6,7 +6,7 @@ class OpenchangeAddressbook extends rcube_addressbook
 {
 
     /** public properties (mandatory) */
-    public $primary_key;
+    public $primary_key = 'id';
     public $groups = false;
     public $readonly = true;
     public $searchonly = false;
@@ -158,14 +158,35 @@ fclose($handle);
         return $this->result;
     }
 
+    /***
+     * This is the search call after clicking at compose from Contacts:
+     *      $CONTACTS->search($CONTACTS->primary_key, $cid, 0, true, true, 'email');
+     *          $cid es un array con uno o varios IDs.
+     */
     public function search($fields, $value, $strict=false, $select=true, $nocount=false, $required=array())
     {
 $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
 fwrite($handle, "\nStarting search\n");
 fclose($handle);
-        // no search implemented, just list all records
-        return $this->list_records();
+
+        /* Compose from Contacts screen */
+        if ($fields == $this->primary_key) {
+            $this->result = new rcube_result_set(count($value));
+
+            foreach ($value as $id) {
+                foreach ($this->contacts as $record) {
+                    if ($record['id'] == $id){
+                        $result_record = $this->contact_oc2rc($record);
+                        $this->result->add($result_record);
+                    }
+                }
+            }
+
+            return $this->result;
+        }
+
+        return $this->result;
     }
 
     public function count($size = 0)
@@ -188,6 +209,11 @@ fclose($handle);
         return $this->result;
     }
 
+    /**
+     * Called when a single contact is selected
+     * Also when you modify a contact
+     * This function should make a PHPbindings specific call
+     */
     public function get_record($id, $assoc=false)
     {
 $file = '/var/log/roundcube/my_debug.txt';
