@@ -1,6 +1,5 @@
 <?php
 
-require_once(dirname(__FILE__) . '/ContactsParser.php');
 require_once(dirname(__FILE__) . '/ArrayContactsMock.php');
 
 class OpenchangeAddressbook extends rcube_addressbook
@@ -18,18 +17,19 @@ class OpenchangeAddressbook extends rcube_addressbook
     public $page_size = 10;
     public $sort_col = 'name';
     public $sort_order = 'ASC';
-    public $coltypes = array(
-                'name' => array('limit'=>1),
-                'firstname' => array('limit'=>1),
-                'surname' => array('limit'=>1),
-                'email' => array('limit'=>1)
-    );
     public $date_cols = array();
 
     private $filter;
     private $result;
     private $name;
     private $contacts;
+    /**
+     * This variable sets which fields can be shown or set while editing
+     */
+    public $coltypes = array('name', 'firstname', 'surname', 'middlename', 'prefix', 'suffix', 'nickname',
+            'jobtitle', 'organization', 'department', 'assistant', 'manager',
+            'gender', 'maidenname', 'spouse', 'email', 'phone', 'address',
+            'birthday', 'anniversary', 'website', 'im', 'notes', 'photo');
 
     public function __construct($id)
     {
@@ -71,7 +71,7 @@ $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
 fwrite($handle, "\nStarting get_search_set\n");
 fclose($handle);
-        return $this->filter;                                                   
+        return $this->filter;
     }
 
     public function set_group($gid)
@@ -83,26 +83,26 @@ fclose($handle);
         $this->group_id = $gid;
     }
 
-    public function reset()                                                     
-    {                                                                           
+    public function reset()
+    {
 $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
 fwrite($handle, "\nStarting reset\n");
 fclose($handle);
-        $this->result = null;                                                   
-        $this->filter = null;                                                   
-    }                                                                           
+        $this->result = null;
+        $this->filter = null;
+    }
 
     function list_groups($search = null)
-    {                                                                           
+    {
 $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
 fwrite($handle, "\nStarting list_groups\n");
 fclose($handle);
-        return array(                                                           
-                //array('ID' => 'testgroup1', 'name' => "Testgroup"),           
-                );                                                              
-    }                                                                           
+        return array(
+                //array('ID' => 'testgroup1', 'name' => "Testgroup"),
+                );
+    }
 
     /**
      * List the current set of contact records
@@ -117,7 +117,7 @@ fclose($handle);
 $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
 fwrite($handle, "\nStarting list_records\n");
-fwrite($handle, "cols: " . implode(",", $cols) . "\n");
+fwrite($handle, "cols: " . serialize($cols) . "\n");
 fwrite($handle, "subset: " . $subset . "\n");
 fwrite($handle, "nocount: " . $nocount. "\n");
 fwrite($handle, "filter: " . $this->filter. "\n");
@@ -147,10 +147,10 @@ fwrite($handle, "contacts count: " . count($this->contacts) . "\n");
         $i = $start_pos;
 
         while ($i < $start_pos + $length){
-            $contact = ContactsParser::contact_oc2rc($this->contacts[$i]);
+            $contact = $this->contact_oc2rc($this->contacts[$i]);
             $this->result->add($contact);
-fwrite($handle, $i . " - Adding to the result:" . $contact["email"]);
-fwrite($handle, " | " . $contact["ID"] . "\n");
+/*fwrite($handle, $i . " - Adding to the result:" . $contact["email"]);
+fwrite($handle, " | " . $contact["ID"] . "\n");*/
 
             $i++;
         }
@@ -192,21 +192,21 @@ fclose($handle);
     {
 $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
-fwrite($handle, "\nStarting get_record with id = " . $id ."\n");
-fclose($handle);
+fwrite($handle, "\nStarting get_record id = " . $id . " | assoc = " .$assoc ."\n");
 
-        $this->list_records();
-
-        while ($record = $this->result->next()) {
-            if ($record['ID'] == $id){
+        foreach ($this->contacts as $record) {
+            if ($record['id'] == $id){
+                $result_record = $this->contact_oc2rc($record);
                 $this->result = new rcube_result_set(1);
-                $this->result->add($record);
+                $this->result->add($result_record);
 
-                return $assoc ? $record: $this->result;
+                return $result_record;
             }
         }
 
-        return false;
+fclose($handle);
+
+        return $assoc ? $result_record: $this->result;
     }
 
 
@@ -257,5 +257,85 @@ fclose($handle);
         return false;
     }
 
-}
+    /**
+     * Aux functions begin
+     */
 
+    /**
+     * Every accepted Roundcube field is at:
+     * roundcubemail/program/steps/addressbooks/func.inc
+     * at the "global $CONTACT_COLTYPES"
+     *
+     * If there is no "limit => 1" the value have to be set into
+     * an array.
+     */
+    private $contact_field_translation = array(
+            'id'                    => 'ID',
+            'card_name'             => 'name',
+            'topic'                 => 'nickname',
+            'full_name'             => 'full_name',
+            'given_name'            => 'firstname',
+            'surname'               => 'surname',
+            'title'                 => 'title',
+            'department'            => 'department',
+            'company'               => 'organization',
+            'email'                 => '@email:home',
+            'office_phone'          => '@phone:work',
+            'home_phone'            => '@phone:home',
+            'mobile_phone'          => 'mobile_phone',
+            'business_fax'          => 'business_fax',
+            'business_home_page'    => 'business_home_page',
+            'postal_address'        => 'address',
+            'street_address'        => 'address/street',
+            'locality'              => 'locality',
+            'state'                 => 'state',
+            'country'               => 'country',
+            'middlename'            => 'middlename',
+            );
+
+    private function contact_oc2rc($contact)
+    {
+        $result_contact = array();
+
+        foreach ($contact as $key => $value) {
+            if ($this->key_is_correct($key)) {
+                $rcube_key = $this->contact_field_translation[$key];
+
+                if ($this->value_has_to_be_array($rcube_key)) {
+                    $value = array($value);
+                    $rcube_key = substr($rcube_key, 1);
+                }
+
+                $result_contact = $this->parse_recursive_field($rcube_key,
+                                                    $value, $result_contact);
+            }
+        }
+
+        return $result_contact;
+    }
+
+    private function parse_recursive_field($key, $value, $contact)
+    {
+        $result = $contact;
+
+        $keys = explode("/", $key);
+
+        if (count($keys) == 1)
+            $result[$keys[0]] = $value;
+        else if (count($keys) == 2)
+            $result[$keys[0]][$keys[1]] = $value;
+
+        return $result;
+    }
+
+    private function key_is_correct($key)
+    {
+        return array_key_exists($key, $this->contact_field_translation);
+    }
+
+    private function value_has_to_be_array($key)
+    {
+        return preg_match("/@/", $key);
+    }
+}
+?>
