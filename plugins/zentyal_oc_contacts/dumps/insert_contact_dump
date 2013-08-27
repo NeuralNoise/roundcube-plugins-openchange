@@ -1,0 +1,60 @@
+Starting set_search_set 
+The filter is: (`email` = 'home@email.com' OR `email` LIKE 'home@email.com,%' OR `email` LIKE '%,home@email.com,%' OR `email` LIKE '%,home@email.com') 
+
+Starting insert, with check =  
+array(17) { 
+    ["name"]=> 
+        string(12) "display name" 
+        ["firstname"]=> 
+        string(10) "first name" 
+        ["surname"]=> 
+        string(9) "last name" 
+        ["email:home"]=> 
+        array(1) { 
+            [0]=> 
+                string(14) "home@email.com" 
+        } 
+    ["middlename"]=> 
+        string(0) "" 
+        ["prefix"]=> 
+        string(0) "" 
+        ["suffix"]=> 
+        string(0) "" 
+        ["nickname"]=> 
+        string(0) "" 
+        ["jobtitle"]=> 
+        string(0) "" 
+        ["organization"]=> 
+        string(0) "" 
+        ["department"]=> 
+        string(0) "" 
+        ["gender"]=> 
+        string(0) "" 
+        ["phone:home"]=> 
+        array(1) { 
+            [0]=> 
+                string(9) "homephone" 
+        } 
+    ["address:home"]=> 
+        array(1) { 
+            [0]=> 
+                array(5) { 
+                    ["street"]=> 
+                        string(0) "" 
+                        ["locality"]=> 
+                        string(0) "" 
+                        ["zipcode"]=> 
+                        string(0) "" 
+                        ["region"]=> 
+                        string(0) "" 
+                        ["country"]=> 
+                        string(0) "" 
+                } 
+        } 
+    ["birthday"]=> 
+        string(0) "" 
+        ["notes"]=> 
+        string(0) "" 
+        ["photo"]=> 
+        string(0) "" 
+}

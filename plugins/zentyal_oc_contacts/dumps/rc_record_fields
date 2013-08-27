@@ -1,0 +1,79 @@
+An address book
+readonly
+if AB == 'hidden' then key is not shown
+
+A contact
+ * If the values are set into an array, they will be shown
+ * type:subtype
+
+readonly
+ID
+email
+
+photo (buscado con search)
+    $data = is_array($record['photo']) ? $record['photo'][0] : $record['photo'];
+    if (!preg_match('![^a-z0-9/=+-]!i', $data))
+        $data = base64_decode($data, true);
+
+'names'    => array('prefix','firstname','middlename','surname','suffix'),
+'displayname' => array('name'),
+'nickname' => array('nickname'),
+'organization' => array('organization'),
+'department' => array('department'),
+'jobtitle' => array('jobtitle'),
+
+
+FORMS
+
+$form = array(
+        'head' => array(  // section 'head' is magic!
+            'content' => array(
+                'prefix' => array('type' => 'text'),
+                'firstname' => array('type' => 'text'),
+                'middlename' => array('type' => 'text'),
+                'surname' => array('type' => 'text'),
+                'suffix' => array('type' => 'text'),
+                ),
+            ),
+        );
+
+$form = array(
+        'contact' => array(
+            'name'    => rcube_label('properties'),
+            'content' => array(
+                'email' => array('size' => $i_size, 'render_func' => 'rcmail_render_email_value'),
+                'phone' => array('size' => $i_size),
+                'address' => array(),
+                'website' => array('size' => $i_size, 'render_func' => 'rcmail_render_url_value'),
+                'im' => array('size' => $i_size),
+                ),
+            ),
+        'personal' => array(
+            'name'    => rcube_label('personalinfo'),
+            'content' => array(
+                'gender' => array('size' => $i_size),
+                'maidenname' => array('size' => $i_size),
+                'birthday' => array('size' => $i_size),
+                'anniversary' => array('size' => $i_size),
+                'manager' => array('size' => $i_size),
+                'assistant' => array('size' => $i_size),
+                'spouse' => array('size' => $i_size),
+                ),
+            ),
+        );
+
+if (isset($CONTACT_COLTYPES['notes'])) {
+    $form['notes'] = array(
+            'name'    => rcube_label('notes'),
+            'content' => array(
+                'notes' => array('type' => 'textarea', 'label' => false),
+                ),
+            );
+}
+
+if ($CONTACTS->groups) {
+    $form['groups'] = array(
+            'name'    => rcube_label('groups'),
+            'content' => rcmail_contact_record_groups($record['ID']),
+            );
+}
