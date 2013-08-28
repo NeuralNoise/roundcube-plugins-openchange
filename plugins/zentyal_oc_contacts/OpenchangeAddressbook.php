@@ -308,14 +308,14 @@ fclose($handle);
             'email'                 => '@email:home',
             'office_phone'          => '@phone:work',
             'home_phone'            => '@phone:home',
-            'mobile_phone'          => 'mobile_phone',
+            'mobile_phone'          => '@phone:mobile',
             'business_fax'          => 'business_fax',
             'business_home_page'    => 'business_home_page',
             'postal_address'        => 'address',
             'street_address'        => 'address/street',
-            'locality'              => 'locality',
+            'locality'              => 'address/locality',
             'state'                 => 'state',
-            'country'               => 'country',
+            'country'               => 'address/country',
             'middlename'            => 'middlename',
             );
 
