@@ -39,12 +39,17 @@ class ArrayContactsMock
         if (! $contact){
             $contact['id'] = generate_random_string(10, TRUE);
             $contact['card_name'] = generate_random_string(4, FALSE);
-            $contact['given_name'] = $contact['card_name'] . "GN" . generate_random_string(4, FALSE);
-            $contact['surname'] = $contact['card_name'] . "SN" . generate_random_string(4, FALSE);
+            $contact['given_name'] = generate_random_string(6, FALSE);
+            $contact['surname'] = generate_random_string(8, FALSE);
             $contact['middlename'] = generate_random_string(2, FALSE) . ".";
             $contact['email'] = $contact['card_name'] . "@supercow.test";
             $contact['home_phone'] = generate_random_string(9, TRUE);
-            $contact['street_address'] = generate_random_string(9, FALSE);
+            $contact['office_phone'] = generate_random_string(9, TRUE);
+            $contact['mobile_phone'] = generate_random_string(9, TRUE);
+            $contact['street_address'] = generate_random_string(6, FALSE) . " "
+                                            . generate_random_string(9, FALSE);
+            $contact['locality'] = generate_random_string(9, FALSE);
+            $contact['country'] = generate_random_string(5, FALSE);
         }
 
         array_push($this->contactsArray, $contact);
