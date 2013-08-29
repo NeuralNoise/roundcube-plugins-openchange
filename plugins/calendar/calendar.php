@@ -317,10 +317,7 @@ class calendar extends rcube_plugin
     $p['blocks']['view']['name'] = $this->gettext('mainoptions');
 
     if (!isset($no_override['calendar_default_view'])) {
-      if (!$p['current']) {
         $p['blocks']['view']['content'] = true;
-        return $p;
-      }
 
       $field_id = 'rcmfd_default_view';
       $select = new html_select(array('name' => '_default_view', 'id' => $field_id));
@@ -335,10 +332,7 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_timeslots'])) {
-      if (!$p['current']) {
         $p['blocks']['view']['content'] = true;
-        return $p;
-      }
 
       $field_id = 'rcmfd_timeslot';
       $choices = array('1', '2', '3', '4', '6');
@@ -351,11 +345,6 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_first_day'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
-
       $field_id = 'rcmfd_firstday';
       $select = new html_select(array('name' => '_first_day', 'id' => $field_id));
       $select->add(rcube_label('sunday'), '0');
@@ -372,11 +361,6 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_first_hour'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
-
       $time_format = $this->rc->config->get('time_format', libcalendaring::to_php_date_format($this->rc->config->get('calendar_time_format', $this->defaults['calendar_time_format'])));
       $select_hours = new html_select();
       for ($h = 0; $h < 24; $h++)
@@ -390,11 +374,6 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_work_start'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
-
       $field_id = 'rcmfd_workstart';
       $p['blocks']['view']['options']['workinghours'] = array(
         'title' => html::label($field_id, Q($this->gettext('workinghours'))),
@@ -404,11 +383,6 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_event_coloring'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
-
       $field_id = 'rcmfd_coloring';
       $select_colors = new html_select(array('name' => '_event_coloring', 'id' => $field_id));
       $select_colors->add($this->gettext('coloringmode0'), 0);
@@ -426,11 +400,6 @@ class calendar extends rcube_plugin
     $this->load_driver();
 
     if (!isset($no_override['calendar_default_alarm_type'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
-
       $field_id = 'rcmfd_alarm';
       $select_type = new html_select(array('name' => '_alarm_type', 'id' => $field_id));
       $select_type->add($this->gettext('none'), '');
@@ -444,11 +413,6 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_default_alarm_offset'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
-
       $field_id = 'rcmfd_alarm';
       $input_value = new html_inputfield(array('name' => '_alarm_value', 'id' => $field_id . 'value', 'size' => 3));
       $select_offset = new html_select(array('name' => '_alarm_offset', 'id' => $field_id . 'offset'));
@@ -463,10 +427,6 @@ class calendar extends rcube_plugin
     }
 
     if (!isset($no_override['calendar_default_calendar'])) {
-      if (!$p['current']) {
-        $p['blocks']['view']['content'] = true;
-        return $p;
-      }
       // default calendar selection
       $field_id = 'rcmfd_default_calendar';
       $select_cal = new html_select(array('name' => '_default_calendar', 'id' => $field_id, 'is_escaped' => true));
@@ -484,11 +444,6 @@ class calendar extends rcube_plugin
     // category definitions
     if (!$this->driver->nocategories && !isset($no_override['calendar_categories'])) {
         $p['blocks']['categories']['name'] = $this->gettext('categories');
-
-        if (!$p['current']) {
-          $p['blocks']['categories']['content'] = true;
-          return $p;
-        }
 
         $categories = (array) $this->driver->list_categories();
         $categories_list = '';
