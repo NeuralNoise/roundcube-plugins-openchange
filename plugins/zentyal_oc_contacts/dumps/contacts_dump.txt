@@ -1,0 +1,85 @@
+Contacts
+array(2) {
+    [0]=>
+        array(3) {
+            ["id"]=>
+                string(33) "8c010d0000000001/a4010e0000000001"
+                ["cardName"]=>
+                string(16) "Kerihuel, Julien"
+                ["email"]=>
+                string(21) "jkerihuel@zentyal.com"
+        }
+    [1]=>
+        array(3) {
+            ["id"]=>
+                string(33) "8c010d0000000001/a5010e0000000001"
+                ["cardName"]=>
+                string(16) "Correas, Ignacio"
+                ["email"]=>
+                string(20) "icorreas@zentyal.com"
+        }
+}
+
+
+
+
+Codigo ocn los distintos campos posibles:
+
+add_assoc_string(contact, "id", id ? (char*) id : "", 1);
+if (card_name) {
+    add_assoc_string(contact, "cardName", card_name ? (char*) card_name : "", 1);
+}
+if (topic) {
+    add_assoc_string(contact, "topic", topic ? (char*) topic : "", 1);
+}
+if (full_name) {
+    add_assoc_string(contact, "fullName", full_name ? (char*) full_name : "", 1);
+} else if (given_name && surname) {
+    size_t full_name_len = strlen(given_name) + strlen(surname) + 1;
+    full_name = (const char*) emalloc(full_name_len);
+    snprintf((char*) full_name, full_name_len, "%s %s", given_name, surname);
+    add_assoc_string(contact, "fullName", (char*) full_name, 0);
+}
+if (title) {
+    add_assoc_string(contact, "title", title ? (char*) title : "", 1);
+}
+if (department) {
+    add_assoc_string(contact, "department", department ? (char*) department : "", 1);
+}
+if (company) {
+    add_assoc_string(contact, "company", company ? (char*) company : "", 1);
+}
+if (email) {
+    add_assoc_string(contact, "email", email ? (char*) email : "", 1);
+}
+if (office_phone) {
+    add_assoc_string(contact, "officePhone", office_phone ? (char*) office_phone : "", 1);
+}
+if (home_phone) {
+    add_assoc_string(contact, "homePhone", home_phone ? (char*) home_phone : "", 1);
+}
+if (mobile_phone) {
+    add_assoc_string(contact, "mobilePhone", mobile_phone ? (char*) mobile_phone : "", 1);
+}
+if (business_fax) {
+    add_assoc_string(contact, "businessFax", business_fax ? (char*) business_fax : "", 1);
+}
+if (business_home_page) {
+    add_assoc_string(contact, "businessHomePage", business_home_page ? (char*) business_home_page : "", 1);
+}
+if (postal_address) {
+    add_assoc_string(contact, "postalAddress", postal_address ? (char*) postal_address : "", 1);
+}
+if (street_address) {
+    add_assoc_string(contact, "homePhone", street_address ? (char*) street_address : "", 1);
+}
+if (locality) {
+    add_assoc_string(contact, "locality", locality ? (char*) locality : "", 1);
+}
+if (state) {
+    add_assoc_string(contact, "state", state ? (char*) state : "", 1);
+}
+if (country) {
+    add_assoc_string(contact, "country", country ? (char*) country : "", 1);
+} 
+

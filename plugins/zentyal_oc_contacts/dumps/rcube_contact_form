@@ -1,0 +1,158 @@
+Starting contact 'showing':array(38) {
+    ["ID"]=>
+        string(1) "3"
+    ["name"]=>
+        string(7) "mikyton"
+    ["firstname"]=>
+        string(3) "uno"
+    ["surname"]=>
+        string(3) "dos"
+    ["middlename"]=>
+        string(2) "J."
+    ["nickname"]=>
+        string(11) "figarocorso"
+    ["organization"]=>
+        string(7) "Zentyal"
+    ["prefix"]=>
+        string(3) "Sr."
+    ["suffix"]=>
+        string(3) "Jr."
+    ["phone:home"]=>
+        array(1) {
+            [0]=>
+                string(6) "cuatro"
+        }
+    ["phone:home2"]=>
+        array(1) {
+            [0]=>
+                string(3) "dos"
+        }
+    ["birthday"]=>
+        array(1) {
+            [0]=>
+                string(10) "1984-02-01"
+        }
+    ["website:homepage"]=>
+        array(1) {
+            [0]=>
+                string(17) "http://mysite.com"
+        }
+    ["notes"]=>
+        array(1) {
+            [0]=>
+                string(16) "This is my note!"
+        }
+    ["email:home"]=>
+        array(1) {
+            [0]=>
+                string(13) "tres@tres.com"
+        }
+    ["email:work"]=>
+        array(1) {
+            [0]=>
+                string(10) "lkj@lj.com"
+        }
+    ["email:other"]=>
+        array(1) {
+            [0]=>
+                string(9) "lkj@lj.co"
+        }
+    ["address:home"]=>
+        array(2) {
+            [0]=>
+                array(5) {
+                    ["country"]=>
+                        string(7) "españa"
+                        ["zipcode"]=>
+                        string(5) "50003"
+                        ["region"]=>
+                        string(1) "z"
+                        ["locality"]=>
+                        string(8) "zaragoza"
+                        ["street"]=>
+                        string(5) "calle"
+                }
+            [1]=>
+                array(5) {
+                    ["country"]=>
+                        string(8) "españa2"
+                        ["zipcode"]=>
+                        string(5) "50003"
+                        ["region"]=>
+                        string(2) "z2"
+                        ["locality"]=>
+                        string(10) "zaragoza 2"
+                        ["street"]=>
+                        string(14) "second address"
+                }
+        }
+    ["jobtitle"]=>
+        array(1) {
+            [0]=>
+                string(9) "Your boss"
+        }
+    ["department"]=>
+        array(1) {
+            [0]=>
+                string(5) "Cloud"
+        }
+    ["gender"]=>
+        array(1) {
+            [0]=>
+                string(4) "male"
+        }
+    ["maidenname"]=>
+        array(1) {
+            [0]=>
+                string(4) "Doh!"
+        }
+    ["anniversary"]=>
+        array(1) {
+            [0]=>
+                string(10) "2013-08-19"
+        }
+    ["assistant"]=>
+        array(1) {
+            [0]=>
+                string(6) "Cómo?"
+        }
+    ["manager"]=>
+        array(1) {
+            [0]=>
+                string(10) "My grandma"
+        }
+    ["spouse"]=>
+        array(1) {
+            [0]=>
+                string(4) "Aham"
+        }
+    ["im:jabber"]=>
+        array(1) {
+            [0]=>
+                string(6) "jabber"
+        }
+    ["im:icq"]=>
+        array(1) {
+            [0]=>
+                string(3) "icq"
+        }
+    ["im:msn"]=>
+        array(1) {
+            [0]=>
+                string(3) "msn"
+        }
+    ["im:aim"]=>
+        array(1) {
+            [0]=>
+                string(3) "aim"
+        }
+    ["im:yahoo"]=>
+        array(1) {
+            [0]=>
+                string(5) "yahoo"
+        }
+    ["im:skype"]=>
+        array(1) {
+            [0]=>
+                string(5) "skype"
+        }
