@@ -1,10 +1,9 @@
 <?php
 /**
- * Database driver for the Calendar plugin
+ * Zentyal Openchange driver for the Calendar plugin
  *
  * @version @package_version@
- * @author Lazlo Westerhof <hello@lazlo.me>
- * @author Thomas Bruederli <bruederli@kolabsys.com>
+ * @author Miguel Julián <mjulian@zentyal.com>
  *
  * Copyright (C) 2010, Lazlo Westerhof <hello@lazlo.me>
  * Copyright (C) 2012, Kolab Systems AG <contact@kolabsys.com>
