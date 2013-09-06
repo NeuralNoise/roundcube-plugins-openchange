@@ -49,13 +49,30 @@ class zentyal_openchange_driver extends calendar_driver
     private $db_colors = 'colors';
 
     private $handle;
-    private $calendarMock;
+    private $oc_enabled = true;
+
+    private $calendar;
+    private $mailbox;
+    private $session;
+    private $mapiProfile;
+    private $mapi;
+
 
     /**
      * Default destructor
      */
     public function __destruct()
     {
+        fwrite($this->handle, "\nError => Starting the destructor\n");
+        if ($this->oc_enabled) {
+            fwrite($this->handle, "Destructing MAPI objects\n");
+            unset($this->calendar);
+            unset($this->mailbox);
+            unset($this->session);
+            unset($this->mapiProfile);
+            unset($this->mapi);
+        }
+        fwrite($this->handle, "\nError => Exiting the destructor\n");
         fclose($this->handle);
     }
 
@@ -66,7 +83,17 @@ class zentyal_openchange_driver extends calendar_driver
     {
         $file = '/var/log/roundcube/my_debug.txt';
         $this->handle = fopen($file, 'a');
-        fwrite($this->handle, "\nWarning => Starting the contructor\n");
+        fwrite($this->handle, "\nError => Starting the contructor\n");
+
+        //Creating the OC binding
+        /* TODO: Defensive code here */
+        if ($this->oc_enabled) {
+            $this->mapi = new MAPIProfileDB("/home/vagrant/.openchange/profiles.ldb");
+            $this->mapiProfile = $this->mapi->getProfile('test');
+            $this->session = $this->mapiProfile->logon();
+            $this->mailbox = $this->session->mailbox();
+            $this->calendar = $this->mailbox->calendar();
+        }
 
         $this->cal = $cal;
         $this->rc = $cal->rc;
@@ -75,12 +102,9 @@ class zentyal_openchange_driver extends calendar_driver
         // load library classes
         require_once($this->cal->home . '/lib/Horde_Date_Recurrence.php');
 
-        // mocking
-        require_once($this->cal->home . '/lib/CalendarMock.php');
-        $this->calendarMock = new CalendarMock();
-
         // read database config
         $db = $this->rc->get_dbh();
+        $this->db_colors= $this->rc->config->get('db_table_colors', 'colors');
         $this->db_events = $this->rc->config->get('db_table_events', $db->table_name($this->db_events));
         $this->db_calendars = $this->rc->config->get('db_table_calendars', $db->table_name($this->db_calendars));
         $this->db_attachments = $this->rc->config->get('db_table_attachments', $db->table_name($this->db_attachments));
@@ -94,26 +118,32 @@ class zentyal_openchange_driver extends calendar_driver
     private function _read_calendars()
     {
         fwrite($this->handle, "\nStarting _read_calendars\n");
+
+        if ($this->oc_enabled){
+            $fakeCalendarName = $this->calendar->getName();
+            $fakeCalendarId = $this->calendar->getId();
+        } else {
+            $fakeCalendarName = 'my cal';
+            $fakeCalendarId = '8b010d0000000001';
+        }
+
+        $calendar['showalarms'] = false;
+        $calendar['active'] = true;
+        $calendar['name'] = $fakeCalendarName;
+        $calendar['id'] = $fakeCalendarId;
+        $calendar['calendar_id'] = $fakeCalendarId;
+        $calendar['user_id'] = $this->rc->user->ID;
+        $calendar['readonly'] = false;
+
+        $calendar_ids = array();
+        array_push($calendar_ids, $calendar['id']);
+
+        $this->calendars[$calendar['id']] = $calendar;
+        $this->calendar_ids = join(',', $calendar_ids);
+
         /* TODO: hidden calendars from config?
            $hidden = array_filter(explode(',', $this->rc->config->get('hidden_calendars', '')));
          */
-        if (!empty($this->rc->user->ID)) {
-            $calendar_ids = array();
-            $result = $this->rc->db->query(
-                    "SELECT *, calendar_id AS id FROM " . $this->db_calendars . "
-                    WHERE user_id=?
-                    ORDER BY name",
-                    $this->rc->user->ID
-                    );
-            while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
-                $arr['showalarms'] = intval($arr['showalarms']);
-                $arr['active']     = !in_array($arr['id'], $hidden);
-                $arr['name']       = html::quote($arr['name']);
-                $this->calendars[$arr['calendar_id']] = $arr;
-                $calendar_ids[] = $this->rc->db->quote($arr['calendar_id']);
-            }
-            $this->calendar_ids = join(',', $calendar_ids);
-        }
     }
 
     /**
@@ -129,17 +159,18 @@ class zentyal_openchange_driver extends calendar_driver
         fwrite($this->handle, "\nStarting list_calendars\n");
         // attempt to create a default calendar for this user
         if (empty($this->calendars)) {
-            if ($this->create_calendar(array('name' => 'Default', 'color' => 'cc0000')))
-                $this->_read_calendars();
+            $this->_read_calendars();
         }
 
-        // mocking
-        /*$mockCalendar = $this->calendarMock->generateCalendar("69","1", "OC", "cccc00", 0, "69", true);
-          $this->calendars[$mockCalendar['calendar_id']] =  $mockCalendar;
-          array_push($calendar_ids, $mockCalendar['calendar_id']);
-          $this->calendar_ids .= "," . $mockCalendar['calendar_id'];*/
-
         $calendars = $this->calendars;
+
+        fwrite($this->handle, "All the calendars to show are: \n");
+        foreach ($this->calendars as $calc) {
+            try {
+                fwrite($this->handle, serialize($calc) . "\n");
+            } catch(Exception $e){
+            }
+        }
 
         // If there is no color assigned to a calendar, generate it
         $this->checkAndGetCalendarsColor();
@@ -154,9 +185,8 @@ class zentyal_openchange_driver extends calendar_driver
                 }
             }
         }
+        fwrite($this->handle, "Ending list_calendars\n");
 
-        // 'personal' is unsupported in this driver
-        fwrite($this->handle, serialize($this->calendars) . "\n");
         return $calendars;
     }
 
@@ -175,7 +205,7 @@ class zentyal_openchange_driver extends calendar_driver
             if ($whereClause)
                 $whereClause .= " OR ";
 
-            $whereClause .= "(calendar_id=" . $calendar['id'] .
+            $whereClause .= "(calendar_id=\"" . $calendar['id'] . "\"" .
                     " AND user_id=" . $this->rc->user->ID . ")";
         }
 
@@ -190,21 +220,21 @@ class zentyal_openchange_driver extends calendar_driver
             $colors[$arr['calendar_id']] = $arr;
         }
 
-        ob_start();var_dump($colors);
-        fwrite($this->handle, "The colors are: " . ob_get_clean() . "\n");
+        fwrite($this->handle, "The colors are: " . serialize($colors) . "\n");
 
         // If we have found a color, add it to the calendar, or generate it
 
         foreach ($this->calendars as $calendar) {
-            if ($colors[$calendar['calendar_id']]) {
-                $this->calendars[$calendar['calendar_id']]['color'] =
-                    $colors[$calendar['calendar_id']]['color'];
+            if ($colors[$calendar['id']]) {
+                $this->calendars[$calendar['id']]['color'] =
+                    $colors[$calendar['id']]['color'];
             } else {
-                $this->calendars[$calendar['calendar_id']]['color'] =
-                    $this->createColor($calendar['calendar_id'], $calendar['user_id']);
+                $this->calendars[$calendar['id']]['color'] =
+                    $this->createColor($calendar['id'], $calendar['user_id']);
             }
         }
 
+        fwrite($this->handle, "Ending checkAndGetCalendarsColor\n");
     }
 
     /**
@@ -853,38 +883,14 @@ class zentyal_openchange_driver extends calendar_driver
         $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
         $col = is_array($event) && is_numeric($id) ? 'event_id' : 'uid';
 
-        if ($this->cache[$id])
-            return $this->cache[$id];
-
-        if ($active) {
-            $calendars = $this->calendars;
-            foreach ($calendars as $idx => $cal) {
-                if (!$cal['active']) {
-                    unset($calendars[$idx]);
-                }
-            }
-            $cals = join(',', $calendars);
-        }
-        else {
-            $cals = $this->calendar_ids;
+        $calendarTable = $this->calendar->getMessageTable();
+        if ($calendarTable->count() > 0){
+            $event = $calendarTable->summary(1);
+            ob_start();var_dump($event);
+            fwrite($this->handle, ob_get_clean() . "\n");
         }
 
-        $result = $this->rc->db->query(sprintf(
-                    "SELECT e.*, (SELECT COUNT(attachment_id) FROM " . $this->db_attachments . "
-            WHERE event_id = e.event_id OR event_id = e.recurrence_id) AS _attachments
-                    FROM " . $this->db_events . " AS e
-                    WHERE e.calendar_id IN (%s)
-                    AND e.$col=?",
-                    $cals
-                    ),
-                $id);
-
-        if ($result && ($event = $this->rc->db->fetch_assoc($result)) && $event['event_id']) {
-            $this->cache[$id] = $this->_read_postprocess($event);
-            return $this->cache[$id];
-        }
-
-        return false;
+        return $event;
     }
 
     /**
@@ -895,44 +901,38 @@ class zentyal_openchange_driver extends calendar_driver
     public function load_events($start, $end, $query = null, $calendars = null)
     {
         fwrite($this->handle, "\nStarting load_events\n");
-        if (empty($calendars))
-            $calendars = array_keys($this->calendars);
-        else if (is_string($calendars))
-            $calendars = explode(',', $calendars);
 
-        // only allow to select from calendars of this use
-        $calendar_ids = array_map(array($this->rc->db, 'quote'), array_intersect($calendars, array_keys($this->calendars)));
+        $calendarTable = $this->calendar->getMessageTable();
+        $count = $calendarTable->count();
+        while ($count >0) {
+            $event = $calendarTable->summary(1);
+            $event = $this->buildEventFromProperties($event);
+            array_push($events, $calendarTable->summary(1));
+            $count --;
+        }
+        unset($calendarTable);
 
-        // compose (slow) SQL query for searching
-        // FIXME: improve searching using a dedicated col and normalized values
-        if ($query) {
-            foreach (array('title','location','description','categories','attendees') as $col)
-                $sql_query[] = $this->rc->db->ilike($col, '%'.$query.'%');
-            $sql_add = 'AND (' . join(' OR ', $sql_query) . ')';
-                    }
+        return $events;
+    }
 
-                    $events = array();
-                    if (!empty($calendar_ids)) {
-                    $result = $this->rc->db->query(sprintf(
-                            "SELECT e.*, (SELECT COUNT(attachment_id) FROM " . $this->db_attachments . "
-                        WHERE event_id = e.event_id OR event_id = e.recurrence_id) AS _attachments
-                            FROM " . $this->db_events . " AS e
-                            WHERE e.calendar_id IN (%s)
-                            AND e.start <= %s AND e.end >= %s
-                            %s
-                            GROUP BY e.event_id",
-                            join(',', $calendar_ids),
-                            $this->rc->db->fromunixtime($end),
-                            $this->rc->db->fromunixtime($start),
-                            $sql_add
-                            ));
+    /**
+     * Gets the properties from the appointment and fill the result with
+     * in the correct way.
+     *
+     * @param $event MapiMessage
+     *
+     * @return rcube_kolab_event
+     */
+    private function buildEventFromProperties($event)
+    {
+        return $event;
 
-                    while ($result && ($event = $this->rc->db->fetch_assoc($result))) {
-                    $events[] = $this->_read_postprocess($event);
-                    }
-                    }
+        $result = array();
 
-                    return $events;
+        // TODO: set the $result['id'] component
+        // TODO: set the $result['calendar'] = calendar_id
+
+        return $result;
     }
 
     /**
