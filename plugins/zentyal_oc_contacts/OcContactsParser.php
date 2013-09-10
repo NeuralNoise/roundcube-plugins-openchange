@@ -12,6 +12,9 @@ class OcContactsParser
      *
      * If there is no "limit => 1" the value have to be set into
      * an array.
+     *
+     * It seems that rcube maidenname is not pressent a MS-OXOCNTC
+     * TODO: Add the photo management
      */
     public static $contact_field_translation = array(
             'id'                        => 'ID',
@@ -19,28 +22,61 @@ class OcContactsParser
             'PidTagNickname'            => 'nickname',
             'PidTagGeneration'          => 'suffix',
             'PidTagDisplayNamePrefix'   => 'prefix',
-            'full_name'                 => 'full_name',
             'PidTagGivenName'           => 'firstname',
             'PidTagSurname'             => 'surname',
             'PidTagMiddleName'          => 'middlename',
-            'department'                => 'department',
-            'company'                   => 'organization',
+
+            'PidTagTitle'           =>'jobtitle',
+            'PidTagDepartamentName' => 'department',
+            'PidTagCompanyName'     => 'organization',
+
+            /* 0 unespecified, 1 female, 2 male */
+            'PidTagGender'              => 'gender',
+            'PidTagAssistant'           => 'assistant',
+            'PidTagManagerName'         => 'manager',
+            'PidTagSpouseName'          => 'spouse',
+            'PidTagBirthday'            => 'birthday',
+            'PidTagWeddingAnniversary'  => 'anniversary',
+
+
             'PidLidEmail1EmailAddress'  => '@email:home',
             'PidLidEmail2EmailAddress'  => '@email:work',
             'PidLidEmail3EmailAddress'  => '@email:other',
+
             'PidTagPrimaryFaxNumber'    => '@phone:workfax',
             'PidTagBusinessFaxNumber'   => '@phone:workfax',
             'PidTagHomeFaxNumber'       => '@phone:homefax',
-            'office_phone'              => '@phone:work',
-            'home_phone'                => '@phone:home',
-            'mobile_phone'              => '@phone:mobile',
-            'business_fax'              => 'business_fax',
-            'business_home_page'        => 'business_home_page',
-            'postal_address'            => 'address',
-            'street_address'            => 'address/street',
-            'locality'                  => 'address/locality',
-            'state'                     => 'state',
-            'country'                   => 'address/country',
+
+            'PidTagPrimaryTelephoneNumber'      => '@phone:main',
+            'PidTagBusinessTelephoneNumber'     => '@phone:work',
+            'PidTagBusiness2TelephoneNumber'    => '@phone:work2',
+            'PidTagHomeTelephoneNumber'         => '@phone:home',
+            'PidTagHome2TelephoneNumber'        => '@phone:home2',
+            'PidTagMobileTelephoneNumber'       => '@phone:mobile',
+            'PidTagCarTelephoneNumber'          => '@phone:car',
+            'PidTagAssistantTelephoneNumber'    => '@phone:assistant',
+            'PidTagOtherTelephoneNumber'        => '@phone:other',
+
+            'PidTagHomeAddressStreet'           => 'address:home/street',
+            'PidTagWorkAddressStreet'           => 'address:work/street',
+            'PidTagOtherAddressStreet'          => 'address:other/street',
+            'PidTagHomeAddressCity'             => 'address:home/locality',
+            'PidTagWorkAddressCity'             => 'address:work/locality',
+            'PidTagOtherAddressCity'            => 'address:other/locality',
+            'PidTagHomeAddressPostalCode'       => 'address:home/zipcode',
+            'PidTagWorkAddressPostalCode'       => 'address:work/zipcode',
+            'PidTagOtherAddressPostalCode'      => 'address:other/zipcode',
+            'PidTagHomeAddressStateOrProvince'  => 'address:home/region',
+            'PidTagWorkAddressStateOrProvince'  => 'address:work/region',
+            'PidTagOtherAddressStateOrProvince' => 'address:other/region',
+            'PidTagHomeAddressCountry'          => 'address:home/country',
+            'PidTagWorkAddressCountry'          => 'address:work/country',
+            'PidTagOtherAddressCountry'         => 'address:other/country',
+
+            'PidTagInstantMessagingAddress'=> '@im:other',
+
+            'PidTagPersonalHomePage'    => '@website:homepage',
+            'PidTagBusinessHomePage'    => '@website:work',
             );
 
     /**
