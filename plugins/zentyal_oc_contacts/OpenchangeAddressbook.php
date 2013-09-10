@@ -1,6 +1,7 @@
 <?php
 
 require_once(dirname(__FILE__) . '/ArrayContactsMock.php');
+require_once(dirname(__FILE__) . '/OcContactsParser.php');
 
 class OpenchangeAddressbook extends rcube_addressbook
 {
@@ -23,6 +24,17 @@ class OpenchangeAddressbook extends rcube_addressbook
     private $result;
     private $name;
     private $contacts;
+
+    private $handle;
+    private $mocked = false;
+    private $oc_enabled = true;
+
+    private $ocContacts;
+    private $mailbox;
+    private $session;
+    private $mapiProfile;
+    private $mapi;
+
     /**
      * This variable sets which fields can be shown or set while editing
      */
@@ -30,6 +42,23 @@ class OpenchangeAddressbook extends rcube_addressbook
             'jobtitle', 'organization', 'department', 'assistant', 'manager',
             'gender', 'maidenname', 'spouse', 'email', 'phone', 'address',
             'birthday', 'anniversary', 'website', 'im', 'notes', 'photo');
+
+    /**
+     * Default destructor
+     */
+    public function __destruct()
+    {
+        fwrite($this->handle, "\nStarting the destructor\n");
+        if ($this->oc_enabled) {
+            unset($this->ocContacts);
+            unset($this->mailbox);
+            unset($this->session);
+            unset($this->mapiProfile);
+            unset($this->mapi);
+        }
+        fwrite($this->handle, "\nExiting the destructor\n");
+        fclose($this->handle);
+    }
 
     public function __construct($id)
     {
@@ -41,10 +70,30 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->groups = false;
         $this->readonly = false;
 
+        $file = '/var/log/roundcube/my_debug.txt';
+        $this->handle = fopen($file, 'a');
+        fwrite($this->handle, "\nStarting the constructor\n");
+
+        //Creating the OC binding
+        /* TODO: Defensive code here */
+        if ($this->oc_enabled) {
+            $this->mapi = new MAPIProfileDB("/home/vagrant/.openchange/profiles.ldb");
+            $this->mapiProfile = $this->mapi->getProfile('test');
+            $this->session = $this->mapiProfile->logon();
+            $this->mailbox = $this->session->mailbox();
+            $this->ocContacts = $this->mailbox->contacts();
+
+            $contactsTable =  $this->ocContacts->getMessageTable();
+            $this->contacts = $contactsTable->summary();
+        }
+
     /* Creating mocking contacts array */
-        $mocked_contacts = new ArrayContactsMock('/tmp/'.$id);
-        $this->contacts = $mocked_contacts->getContacts();
+        if ($this->mocked) {
+            $mocked_contacts = new ArrayContactsMock('/tmp/'.$id);
+            $this->contacts = $mocked_contacts->getContacts();
+        }
     /* END - Creating mocking contacts array */
+
     }
 
     public function get_name()
@@ -140,21 +189,28 @@ fwrite($handle, "contacts count: " . count($this->contacts) . "\n");
         else
             $start_pos = $this->result->first;
 
+        $subset = 2;
+
         $length = $subset != 0 ? abs($subset) : $this->page_size;
 
-        $this->result = $this->count(200);
+        $this->result = $this->count(2);
 
         $i = $start_pos;
 
+fwrite($this->handle, "start: " . $start_pos . " | length: " . $length . "\n");
+        // TODO: What if results are smaller than length
         while ($i < $start_pos + $length){
-            $contact = $this->contact_oc2rc($this->contacts[$i]);
+            $contact = OcContactsParser::simpleOcContact2Rc($this->contacts[$i]);
             $this->result->add($contact);
-/*fwrite($handle, $i . " - Adding to the result:" . $contact["email"]);
-fwrite($handle, " | " . $contact["ID"] . "\n");*/
+fwrite($handle, $i . " - Adding to the result:" . $contact["email"]);
+fwrite($handle, " | " . $contact["ID"] . "\n");
 
             $i++;
         }
 fclose($handle);
+ob_start(); var_dump($this->result);
+fwrite($this->handle, "The results are:\n");
+fwrite($this->handle, ob_get_clean() . "\n");
         return $this->result;
     }
 
@@ -177,7 +233,7 @@ fclose($handle);
             foreach ($value as $id) {
                 foreach ($this->contacts as $record) {
                     if ($record['id'] == $id){
-                        $result_record = $this->contact_oc2rc($record);
+                        $result_record = OcContactsParser::simpleOcContact2Rc($record);
                         $this->result->add($result_record);
                     }
                 }
@@ -218,11 +274,12 @@ fclose($handle);
     {
 $file = '/var/log/roundcube/my_debug.txt';
 $handle = fopen($file, 'a');
-fwrite($handle, "\nStarting get_record id = " . $id . " | assoc = " .$assoc ."\n");
+fwrite($handle, "\nStarting get_record id = " . $id . " | assoc = " .$assoc);
+fwrite($handle, " | Single id = " . OcContactsParser::getContactId($id, "_") ."\n");
 
         foreach ($this->contacts as $record) {
-            if ($record['id'] == $id){
-                $result_record = $this->contact_oc2rc($record);
+            if (str_replace('/','_',$record['id']) == $id){
+                $result_record = OcContactsParser::getFullContact($this->ocContacts, $record['id']);
                 $this->result = new rcube_result_set(1);
                 $this->result->add($result_record);
 
@@ -281,87 +338,6 @@ $handle = fopen($file, 'a');
 fwrite($handle, "\nStarting remove_from_group\n");
 fclose($handle);
         return false;
-    }
-
-    /**
-     * Aux functions begin
-     */
-
-    /**
-     * Every accepted Roundcube field is at:
-     * roundcubemail/program/steps/addressbooks/func.inc
-     * at the "global $CONTACT_COLTYPES"
-     *
-     * If there is no "limit => 1" the value have to be set into
-     * an array.
-     */
-    private $contact_field_translation = array(
-            'id'                    => 'ID',
-            'card_name'             => 'name',
-            'topic'                 => 'nickname',
-            'full_name'             => 'full_name',
-            'given_name'            => 'firstname',
-            'surname'               => 'surname',
-            'title'                 => 'title',
-            'department'            => 'department',
-            'company'               => 'organization',
-            'email'                 => '@email:home',
-            'office_phone'          => '@phone:work',
-            'home_phone'            => '@phone:home',
-            'mobile_phone'          => '@phone:mobile',
-            'business_fax'          => 'business_fax',
-            'business_home_page'    => 'business_home_page',
-            'postal_address'        => 'address',
-            'street_address'        => 'address/street',
-            'locality'              => 'address/locality',
-            'state'                 => 'state',
-            'country'               => 'address/country',
-            'middlename'            => 'middlename',
-            );
-
-    private function contact_oc2rc($contact)
-    {
-        $result_contact = array();
-
-        foreach ($contact as $key => $value) {
-            if ($this->key_is_correct($key)) {
-                $rcube_key = $this->contact_field_translation[$key];
-
-                if ($this->value_has_to_be_array($rcube_key)) {
-                    $value = array($value);
-                    $rcube_key = substr($rcube_key, 1);
-                }
-
-                $result_contact = $this->parse_recursive_field($rcube_key,
-                                                    $value, $result_contact);
-            }
-        }
-
-        return $result_contact;
-    }
-
-    private function parse_recursive_field($key, $value, $contact)
-    {
-        $result = $contact;
-
-        $keys = explode("/", $key);
-
-        if (count($keys) == 1)
-            $result[$keys[0]] = $value;
-        else if (count($keys) == 2)
-            $result[$keys[0]][$keys[1]] = $value;
-
-        return $result;
-    }
-
-    private function key_is_correct($key)
-    {
-        return array_key_exists($key, $this->contact_field_translation);
-    }
-
-    private function value_has_to_be_array($key)
-    {
-        return preg_match("/@/", $key);
     }
 }
 ?>
