@@ -40,7 +40,7 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public $coltypes = array('name', 'firstname', 'surname', 'middlename', 'prefix', 'suffix', 'nickname',
             'jobtitle', 'organization', 'department', 'assistant', 'manager',
-            'gender', 'maidenname', 'spouse', 'email', 'phone', 'address',
+            'gender', 'spouse', 'email', 'phone', 'address',
             'birthday', 'anniversary', 'website', 'im', 'notes', 'photo');
 
     /**
@@ -189,16 +189,15 @@ fwrite($handle, "contacts count: " . count($this->contacts) . "\n");
         else
             $start_pos = $this->result->first;
 
-        $subset = 2;
-
         $length = $subset != 0 ? abs($subset) : $this->page_size;
 
-        $this->result = $this->count(2);
+        $length = ($length > count($this->contacts)) ? count($this->contacts) : $length;
+
+        $this->result = $this->count($length);
 
         $i = $start_pos;
 
 fwrite($this->handle, "start: " . $start_pos . " | length: " . $length . "\n");
-        // TODO: What if results are smaller than length
         while ($i < $start_pos + $length){
             $contact = OcContactsParser::simpleOcContact2Rc($this->contacts[$i]);
             $this->result->add($contact);
@@ -208,9 +207,6 @@ fwrite($handle, " | " . $contact["ID"] . "\n");
             $i++;
         }
 fclose($handle);
-ob_start(); var_dump($this->result);
-fwrite($this->handle, "The results are:\n");
-fwrite($this->handle, ob_get_clean() . "\n");
         return $this->result;
     }
 
@@ -232,7 +228,7 @@ fclose($handle);
 
             foreach ($value as $id) {
                 foreach ($this->contacts as $record) {
-                    if ($record['id'] == $id){
+                    if (str_replace('/','_', $record['id']) == $id){
                         $result_record = OcContactsParser::simpleOcContact2Rc($record);
                         $this->result->add($result_record);
                     }
@@ -253,6 +249,7 @@ fwrite($handle, "\nStarting count\n");
 fwrite($handle, "Size: " . $size . "\n");
 fwrite($handle, "First: " . ($this->list_page-1) * $this->page_size . "\n");
 fclose($handle);
+        $size = ($size == 0) ? $size : count($this->contacts);
         return new rcube_result_set($size, ($this->list_page-1) * $this->page_size);
     }
 
