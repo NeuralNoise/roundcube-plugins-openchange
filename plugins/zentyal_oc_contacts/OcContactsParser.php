@@ -40,73 +40,74 @@ class OcContactsParser
         PidTagAttachDataBinary
     );
 
-    public static $contact_field_translation = array(
-            PidTagDisplayName       => 'name',
-            PidTagNickname          => 'nickname',
-            PidTagGeneration        => 'suffix',
-            PidTagDisplayNamePrefix => 'prefix',
-            PidTagGivenName         => 'firstname',
-            PidTagSurname           => 'surname',
-            PidTagMiddleName        => 'middlename',
+    /* OpenChangeProperty => array(RcubeFieldName, IsArray, HasSubFields) */
+    public static $oc2RcPropTranslation = array(
+            PidTagDisplayName       => array('field' => 'name', 'isArray' => False, 'subfield' => False),
+            PidTagNickname          => array('field' => 'nickname', 'isArray' => False, 'subfield' => False),
+            PidTagGeneration        => array('field' => 'suffix', 'isArray' => False, 'subfield' => False),
+            PidTagDisplayNamePrefix => array('field' => 'prefix', 'isArray' => False, 'subfield' => False),
+            PidTagGivenName         => array('field' => 'firstname', 'isArray' => False, 'subfield' => False),
+            PidTagSurname           => array('field' => 'surname', 'isArray' => False, 'subfield' => False),
+            PidTagMiddleName        => array('field' => 'middlename', 'isArray' => False, 'subfield' => False),
 
-            PidTagTitle             =>'jobtitle',
-            PidTagDepartmentName    => 'department',
-            PidTagCompanyName       => 'organization',
+            PidTagTitle             => array('field' => 'jobtitle', 'isArray' => False, 'subfield' => False),
+            PidTagDepartmentName    => array('field' => 'department', 'isArray' => False, 'subfield' => False),
+            PidTagCompanyName       => array('field' => 'organization', 'isArray' => False, 'subfield' => False),
 
             /* 0 unespecified, 1 female, 2 male */
-            PidTagGender                => 'gender',
-            PidTagAssistant             => 'assistant',
-            PidTagManagerName           => 'manager',
-            PidTagSpouseName            => 'spouse',
-            PidTagBirthday              => 'birthday',
-            PidTagWeddingAnniversary    => 'anniversary',
+            PidTagGender                => array('field' => 'gender', 'isArray' => False, 'subfield' => False),
+            PidTagAssistant             => array('field' => 'assistant', 'isArray' => False, 'subfield' => False),
+            PidTagManagerName           => array('field' => 'manager', 'isArray' => False, 'subfield' => False),
+            PidTagSpouseName            => array('field' => 'spouse', 'isArray' => False, 'subfield' => False),
+            PidTagBirthday              => array('field' => 'birthday', 'isArray' => False, 'subfield' => False),
+            PidTagWeddingAnniversary    => array('field' => 'anniversary', 'isArray' => False, 'subfield' => False),
 
-            PidLidEmail1EmailAddress    => '@email:home',
-            PidLidEmail2EmailAddress    => '@email:work',
-            PidLidEmail3EmailAddress    => '@email:other',
+            PidLidEmail1EmailAddress    => array('field' => 'email:home', 'isArray' => True, 'subfield' => False),
+            PidLidEmail2EmailAddress    => array('field' => 'email:work', 'isArray' => True, 'subfield' => False),
+            PidLidEmail3EmailAddress    => array('field' => 'email:other', 'isArray' => True, 'subfield' => False),
 
-            PidTagBusinessFaxNumber => '@phone:workfax',
-            PidTagHomeFaxNumber     => '@phone:homefax',
+            PidTagBusinessFaxNumber => array('field' => 'phone:workfax', 'isArray' => True, 'subfield' => False),
+            PidTagHomeFaxNumber     => array('field' => 'phone:homefax', 'isArray' => True, 'subfield' => False),
 
-            PidTagPrimaryTelephoneNumber    => '@phone:main',
-            PidTagBusinessTelephoneNumber   => '@phone:work',
-            PidTagBusiness2TelephoneNumber  => '@phone:work2',
-            PidTagHomeTelephoneNumber       => '@phone:home',
-            PidTagHome2TelephoneNumber      => '@phone:home2',
-            PidTagMobileTelephoneNumber     => '@phone:mobile',
-            PidTagCarTelephoneNumber        => '@phone:car',
-            PidTagAssistantTelephoneNumber  => '@phone:assistant',
-            PidTagOtherTelephoneNumber      => '@phone:other',
+            PidTagPrimaryTelephoneNumber    => array('field' => 'phone:main', 'isArray' => True, 'subfield' => False),
+            PidTagBusinessTelephoneNumber   => array('field' => 'phone:work', 'isArray' => True, 'subfield' => False),
+            PidTagBusiness2TelephoneNumber  => array('field' => 'phone:work2', 'isArray' => True, 'subfield' => False),
+            PidTagHomeTelephoneNumber       => array('field' => 'phone:home', 'isArray' => True, 'subfield' => False),
+            PidTagHome2TelephoneNumber      => array('field' => 'phone:home2', 'isArray' => True, 'subfield' => False),
+            PidTagMobileTelephoneNumber     => array('field' => 'phone:mobile', 'isArray' => True, 'subfield' => False),
+            PidTagCarTelephoneNumber        => array('field' => 'phone:car', 'isArray' => True, 'subfield' => False),
+            PidTagAssistantTelephoneNumber  => array('field' => 'phone:assistant', 'isArray' => True, 'subfield' => False),
+            PidTagOtherTelephoneNumber      => array('field' => 'phone:other', 'isArray' => True, 'subfield' => False),
 
-            PidTagHomeAddressStreet           => 'address:home/street',
-            PidLidWorkAddressStreet           => 'address:work/street',
-            PidTagOtherAddressStreet          => 'address:other/street',
-            PidTagHomeAddressCity             => 'address:home/locality',
-            PidLidWorkAddressCity             => 'address:work/locality',
-            PidTagOtherAddressCity            => 'address:other/locality',
-            PidTagHomeAddressPostalCode       => 'address:home/zipcode',
-            PidLidWorkAddressPostalCode       => 'address:work/zipcode',
-            PidTagOtherAddressPostalCode      => 'address:other/zipcode',
-            PidTagHomeAddressStateOrProvince  => 'address:home/region',
-            PidLidWorkAddressState            => 'address:work/region',
-            PidTagOtherAddressStateOrProvince => 'address:other/region',
-            PidTagHomeAddressCountry          => 'address:home/country',
-            PidLidWorkAddressCountry          => 'address:work/country',
-            PidTagOtherAddressCountry         => 'address:other/country',
+            PidTagHomeAddressStreet             => array('field' => 'address:home', 'isArray' => False, 'street'),
+            PidTadLidWorkAddressStreet          => array('field' => 'address:work', 'isArray' => False, 'street'),
+            PidTagOtherAddressStreet            => array('field' => 'address:other', 'isArray' => False, 'street'),
+            PidTagHomeAddressCity               => array('field' => 'address:home', 'isArray' => False, 'locality'),
+            PidLidWorkAddressCity               => array('field' => 'address:work', 'isArray' => False, 'locality'),
+            PidTagOtherAddressCity              => array('field' => 'address:other', 'isArray' => False, 'locality'),
+            TagHomeAddressPostalCode            => array('field' => 'address:home', 'isArray' => False, 'zipcode'),
+            PidLidWorkAddressPostalCode         => array('field' => 'address:work', 'isArray' => False, 'zipcode'),
+            PidTagOtherAddressPostalCode        => array('field' => 'address:other', 'isArray' => False, 'zipcode'),
+            PidTagHomeAddressStateOrProvince    => array('field' => 'address:home', 'isArray' => False, 'region'),
+            PidLidWorkAddressState              => array('field' => 'address:work', 'isArray' => False, 'region'),
+            PidTagOtherAddressStateOrProvince   => array('field' => 'address:other', 'isArray' => False, 'region'),
+            PidTagHomeAddressCountry            => array('field' => 'address:home', 'isArray' => False, 'country'),
+            PidLidWorkAddressCountry            => array('field' => 'address:work', 'isArray' => False, 'country'),
+            PidTagOtherAddressCountry           => array('field' => 'address:other', 'isArray' => False, 'country'),
 
-            PidLidInstantMessagingAddress => '@im:other',
+            PidLidInstantMessagingAddress => array('field' => 'im:other', 'isArray' => False, 'subfield' => False),
 
-            PidTagPersonalHomePage  => '@website:homepage',
-            PidTagBusinessHomePage  => '@website:work',
+            PidTagPersonalHomePage  => array('field' => 'website:home', 'isArray' => True, 'subfield' => False),
+            PidTagBusinessHomePage  => array('field' => 'website:work', 'isArray' => True, 'subfield' => False),
 
-            PidTagBody => 'notes',
+            PidTagBody => array('field' => 'notes', 'isArray' => False, 'subfield' => False),
 
-            PidTagAttachDataBinary => 'photo',
+            PidTagAttachDataBinary => array('field' => 'photo', 'isArray' => False, 'subfield' => False),
             );
 
     /**
      * Returns a contact ID obtained from a full message id
-     * 
+     *
      * From a full message id (folderID/messageID) it will return a string with
      * only the message ID. As sometimes the delimiter could change, we add it
      * as a parameter. Due to differences between PHP and C signed vs unsigned
@@ -150,54 +151,64 @@ class OcContactsParser
         return $contactProperties;
     }
 
-    public static function Oc2RcParseProps($properties)
+    public static function oc2RcParseProps($properties)
     {
         $contact = array();
 
         $i = 0;
         foreach ($properties as $prop => $field) {
-            $prop = self::$full_contact_properties[$i];
+            $ocProp = self::$full_contact_properties[$i];
+            $rcubeProps = self::$oc2RcPropTranslation[$ocProp];
+
+            if ($field) {
+                if ($rcubeProps['subfield']) {
+                    $key = self::parseOcProp2RcKey($ocProp);
+                    $value = self::parseOcProp2RcValue($ocProp, $field);
+                    $contact[$key][$rcubeProps['subfield']] = $value;
+                } else {
+                    $key = self::parseOcProp2RcKey($ocProp);
+                    $value = self::parseOcProp2RcValue($ocProp, $field);
+                    $contact[$key] = $value;
+                }
+            }
+
             $i++;
-            $contact = self::parseProperty($prop, $field, $contact);
         }
 
         return $contact;
     }
 
-    private static function parseProperty($key, $value, $contact)
+    public static function parseRc2OcProp($rcubeKey)
     {
-    /* TODO: if an array has elements, push into it, not replace */
+        $ocProp = 0;
 
-        $result = $contact;
-
-        $key = self::$contact_field_translation[$key];
-        $keys = explode("/", $key);
-
-        if ($value) {
-            if (self::valueHasToBeArray($key)) {
-                $finalValue = array($value);
-                $keys[0] = substr($keys[0], 1);
-            } else {
-                $finalValue = $value;
+        foreach (self::$oc2RcPropTranslation as $ochange => $rcube) {
+            if (strpos($rcube, $rcubeKey)) {
+                $ocProp = $ochange;
+                break;
             }
-
-            if (count($keys) == 1)
-                $result[$keys[0]] = $finalValue;
-            else if (count($keys) == 2)
-                $result[$keys[0]][$keys[1]] = $finalValue;
         }
 
-        return $result;
+        return $ocProp;
     }
 
-    private static function keyIsCorrect($key)
+
+    private static function parseOcProp2RcKey($key)
     {
-        return array_key_exists($key, $this->contact_field_translation);
+        $rcubeProps = self::$oc2RcPropTranslation[$key];
+
+        return $rcubeProps['field'];
     }
 
-    private static function valueHasToBeArray($key)
+    private static function parseOcProp2RcValue($key, $value)
     {
-        return preg_match("/@/", $key);
+        $rcubeProps = self::$oc2RcPropTranslation[$key];
+
+        if (!$rcubeProps['subfield'])
+            if ($rcubeProps['isArray'])
+                return array($value);
+
+        return $value;
     }
 }
 ?>
