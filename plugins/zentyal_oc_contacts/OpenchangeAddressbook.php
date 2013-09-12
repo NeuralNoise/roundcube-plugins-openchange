@@ -26,7 +26,8 @@ class OpenchangeAddressbook extends rcube_addressbook
     private $contacts;
 
     private $handle;
-    private $mocked = false;
+    private $debug = true;
+    private $file = '/var/log/roundcube/my_debug.txt';
     private $oc_enabled = true;
 
     private $ocContacts;
@@ -48,7 +49,7 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public function __destruct()
     {
-        fwrite($this->handle, "\nStarting the destructor\n");
+        $this->debug_msg( "\nStarting the destructor\n");
         if ($this->oc_enabled) {
             unset($this->ocContacts);
             unset($this->mailbox);
@@ -56,7 +57,7 @@ class OpenchangeAddressbook extends rcube_addressbook
             unset($this->mapiProfile);
             unset($this->mapi);
         }
-        fwrite($this->handle, "\nExiting the destructor\n");
+        $this->debug_msg( "\nExiting the destructor\n");
         fclose($this->handle);
     }
 
@@ -70,84 +71,79 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->groups = false;
         $this->readonly = false;
 
-        $file = '/var/log/roundcube/my_debug.txt';
-        $this->handle = fopen($file, 'a');
-        fwrite($this->handle, "\nStarting the constructor\n");
+        $this->handle = fopen($this->file, 'a');
+        $this->debug_msg( "\nStarting the constructor\n");
 
         //Creating the OC binding
         /* TODO: Defensive code here */
         if ($this->oc_enabled) {
             $this->mapi = new MAPIProfileDB("/home/vagrant/.openchange/profiles.ldb");
+            $this->debug_msg( "1");
             $this->mapiProfile = $this->mapi->getProfile('test');
+            $this->debug_msg( "2");
             $this->session = $this->mapiProfile->logon();
+            $this->debug_msg( "3");
             $this->mailbox = $this->session->mailbox();
+            $this->debug_msg( "4");
             $this->ocContacts = $this->mailbox->contacts();
+            $this->debug_msg( "5");
 
             $contactsTable =  $this->ocContacts->getMessageTable();
-            $this->contacts = $contactsTable->summary();
+            $this->debug_msg( "6");
+            $this->contacts = array();
+            $messages = $contactsTable->getMessages();
+            foreach ($messages as $message) {
+                $record = array();
+                $record['email'] = $message->get(PidLidEmail1EmailAddress);
+                $record['id'] = $message->getID();
+                $record['cardName'] = $message->get(PidTagSurname);
+                array_push($this->contacts, $record);
+            }
+            $this->debug_msg( "7");
         }
+    }
 
-    /* Creating mocking contacts array */
-        if ($this->mocked) {
-            $mocked_contacts = new ArrayContactsMock('/tmp/'.$id);
-            $this->contacts = $mocked_contacts->getContacts();
+    private function debug_msg($string)
+    {
+        if ($this->debug) {
+            fwrite($this->handle, $string);
         }
-    /* END - Creating mocking contacts array */
-
     }
 
     public function get_name()
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting get_name\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting get_name\n");
         return $this->name;
     }
 
     public function set_search_set($filter)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting set_search_set\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting set_search_set\n");
         $this->filter = $filter;
     }
 
     public function get_search_set()
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting get_search_set\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting get_search_set\n");
         return $this->filter;
     }
 
     public function set_group($gid)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting set_group\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting set_group\n");
         $this->group_id = $gid;
     }
 
     public function reset()
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting reset\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting reset\n");
         $this->result = null;
         $this->filter = null;
     }
 
     function list_groups($search = null)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting list_groups\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting list_groups\n");
         return array(
                 //array('ID' => 'testgroup1', 'name' => "Testgroup"),
                 );
@@ -163,15 +159,13 @@ fclose($handle);
      */
     public function list_records($cols=null, $subset=0, $nocount=false)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting list_records\n");
-fwrite($handle, "cols: " . serialize($cols) . "\n");
-fwrite($handle, "subset: " . $subset . "\n");
-fwrite($handle, "nocount: " . $nocount. "\n");
-fwrite($handle, "filter: " . $this->filter. "\n");
-fwrite($handle, "page_size: " . $this->page_size . "\n");
-fwrite($handle, "contacts count: " . count($this->contacts) . "\n");
+        $this->debug_msg( "\nStarting list_records\n");
+        $this->debug_msg( "cols: " . serialize($cols) . "\n");
+        $this->debug_msg( "subset: " . $subset . "\n");
+        $this->debug_msg( "nocount: " . $nocount. "\n");
+        $this->debug_msg( "filter: " . $this->filter. "\n");
+        $this->debug_msg( "page_size: " . $this->page_size . "\n");
+        $this->debug_msg( "contacts count: " . count($this->contacts) . "\n");
 
         if ($nocount || $this->list_page <= 1) {
             $this->result = new rcube_result_set();
@@ -197,16 +191,15 @@ fwrite($handle, "contacts count: " . count($this->contacts) . "\n");
 
         $i = $start_pos;
 
-fwrite($this->handle, "start: " . $start_pos . " | length: " . $length . "\n");
+        $this->debug_msg( "start: " . $start_pos . " | length: " . $length . "\n");
         while ($i < $start_pos + $length){
             $contact = OcContactsParser::simpleOcContact2Rc($this->contacts[$i]);
             $this->result->add($contact);
-fwrite($handle, $i . " - Adding to the result:" . $contact["email"]);
-fwrite($handle, " | " . $contact["ID"] . "\n");
+            $this->debug_msg( $i . " - Adding to the result:" . $contact["email"]);
+            $this->debug_msg( " | " . $contact["ID"] . "\n");
 
             $i++;
         }
-fclose($handle);
         return $this->result;
     }
 
@@ -217,10 +210,7 @@ fclose($handle);
      */
     public function search($fields, $value, $strict=false, $select=true, $nocount=false, $required=array())
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting search\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting search\n");
 
         /* Compose from Contacts screen */
         if ($fields == $this->primary_key) {
@@ -243,22 +233,16 @@ fclose($handle);
 
     public function count($size = 0)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting count\n");
-fwrite($handle, "Size: " . $size . "\n");
-fwrite($handle, "First: " . ($this->list_page-1) * $this->page_size . "\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting count\n");
+        $this->debug_msg( "Size: " . $size . "\n");
+        $this->debug_msg( "First: " . ($this->list_page-1) * $this->page_size . "\n");
         $size = ($size == 0) ? $size : count($this->contacts);
         return new rcube_result_set($size, ($this->list_page-1) * $this->page_size);
     }
 
     public function get_result()
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting get_result\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting get_result\n");
         return $this->result;
     }
 
@@ -269,14 +253,13 @@ fclose($handle);
      */
     public function get_record($id, $assoc=false)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting get_record id = " . $id . " | assoc = " .$assoc);
-fwrite($handle, " | Single id = " . OcContactsParser::getContactId($id, "_") ."\n");
+        $this->debug_msg( "\nStarting get_record id = " . $id . " | assoc = " .$assoc);
+        $this->debug_msg( " | Single id = " . OcContactsParser::getContactId($id, "_") ."\n");
 
         foreach ($this->contacts as $record) {
-            if (str_replace('/','_',$record['id']) == $id){
-                $result_record = OcContactsParser::getFullContact($this->ocContacts, $record['id']);
+            $recordId = str_replace('/','_',$record['id']);
+            if ($recordId  == $id){
+                $result_record = $this->getFullContact($recordId);
                 $this->result = new rcube_result_set(1);
                 $this->result->add($result_record);
 
@@ -284,18 +267,54 @@ fwrite($handle, " | Single id = " . OcContactsParser::getContactId($id, "_") ."\
             }
         }
 
-fclose($handle);
 
         return $assoc ? $result_record: $this->result;
+    }
+
+    private function getFullContact($id)
+    {
+        $contact = array();
+
+        //$OcContactId = OcContactsParser::getContactId($id, "/", true);
+        //$fetchedContact = $contacts->openMessage($contactId);
+        $OcContact = $this->ocContacts->openMessage($id);
+
+        $propsToGet = OcContactsParser::$full_contact_properties;
+        $properties = OcContactsParser::getProperties($OcContact, $propsToGet);
+        $contact = OcContactsParser::Oc2RcParseProps($properties);
+        $contact['ID'] = $id;
+
+        return $contact;
+    }
+
+    /**
+     * Update a specific contact record
+     *
+     * @param mixed Record identifier
+     * @param array Assoziative array with save data
+     * @return boolean True on success, False on error
+     */
+    function update($id, $save_cols)
+    {
+        $updated = false;
+        $record = $this->get_record($id, true);
+//        $save_cols = $this->convert_save_data($save_cols, $record);
+
+        foreach ($save_cols as $col => $value) {
+            $this->debug_msg( "col: " . $col . " | value: " . $value . "\n");
+        }
+
+
+        $this->result = null;  // clear current result (from get_record())
+
+        //TODO: Obviously, this can be false :-) return $updated;
+        return true;
     }
 
 
     function create_group($name)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting create_group\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting create_group\n");
         $result = false;
 
         return $result;
@@ -303,37 +322,25 @@ fclose($handle);
 
     function delete_group($gid)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting delete_group\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting delete_group\n");
         return false;
     }
 
     function rename_group($gid, $newname)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting rename_group\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting rename_group\n");
         return $newname;
     }
 
     function add_to_group($group_id, $ids)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting add_to_group\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting add_to_group\n");
         return false;
     }
 
     function remove_from_group($group_id, $ids)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting remove_from_group\n");
-fclose($handle);
+        $this->debug_msg( "\nStarting remove_from_group\n");
         return false;
     }
 }

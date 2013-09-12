@@ -36,7 +36,8 @@ class OcContactsParser
         PidLidWorkAddressState,PidTagOtherAddressStateOrProvince,
         PidTagHomeAddressCountry,PidLidWorkAddressCountry,
         PidTagOtherAddressCountry,PidLidInstantMessagingAddress,
-        PidTagPersonalHomePage,PidTagBusinessHomePage, PidTagBody
+        PidTagPersonalHomePage,PidTagBusinessHomePage, PidTagBody,
+        PidTagAttachDataBinary
     );
 
     public static $contact_field_translation = array(
@@ -99,6 +100,8 @@ class OcContactsParser
             PidTagBusinessHomePage  => '@website:work',
 
             PidTagBody => 'notes',
+
+            PidTagAttachDataBinary => 'photo',
             );
 
     /**
@@ -119,7 +122,7 @@ class OcContactsParser
     public static function getContactId($composedId, $delimiter="/", $toHex=false)
     {
         $ids = explode($delimiter, $composedId);
-        
+
         if ($toHex)
             $ids[1] = "0x" . $ids[1];
 
@@ -137,44 +140,27 @@ class OcContactsParser
         return $result_contact;
     }
 
-    public static function getFullContact($contacts, $id)
+    public static function getProperties($fetchedContact, $full_contact_properties)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting getFullContact id = " . $id . "\n");
-
-    /* TODO: manage de id -> ID conversion */
-        $contactId = self::getContactId($id, "/", true);    
-        $fetchedContact = $contacts->openMessage($contactId);
         $contactProperties = call_user_func_array(
                 array($fetchedContact, 'get'),
-                self::$full_contact_properties);
+                $full_contact_properties);
 
-        $resultContact = self::parseProperties($contactProperties);
-        $resultContact['ID'] = $id;
 
-ob_start(); var_dump($resultContact);
-fwrite($handle, "this is the contact:\n" . ob_get_clean() . "\n");
-
-fclose($handle);
-        return $resultContact;
+        return $contactProperties;
     }
 
-    private static function parseProperties($properties)
+    public static function Oc2RcParseProps($properties)
     {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
         $contact = array();
 
         $i = 0;
-
         foreach ($properties as $prop => $field) {
             $prop = self::$full_contact_properties[$i];
             $i++;
-fwrite($handle, "prop: " . $prop . " | field: " . $field . "\n");
-            $contact = self::parseProperty($prop, $field, $contact);    
+            $contact = self::parseProperty($prop, $field, $contact);
         }
-fclose($handle);
+
         return $contact;
     }
 
@@ -182,14 +168,11 @@ fclose($handle);
     {
     /* TODO: if an array has elements, push into it, not replace */
 
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "===> ");
         $result = $contact;
 
         $key = self::$contact_field_translation[$key];
         $keys = explode("/", $key);
-        
+
         if ($value) {
             if (self::valueHasToBeArray($key)) {
                 $finalValue = array($value);
@@ -198,15 +181,12 @@ fwrite($handle, "===> ");
                 $finalValue = $value;
             }
 
-    
-    fwrite($handle, "prop: " . serialize($keys) . " | field: " . $finalValue . "\n");
-
             if (count($keys) == 1)
                 $result[$keys[0]] = $finalValue;
             else if (count($keys) == 2)
                 $result[$keys[0]][$keys[1]] = $finalValue;
         }
-fclose($handle);
+
         return $result;
     }
 
