@@ -17,6 +17,10 @@ class OcContactsParser
      * TODO: Add the photo management
      */
 
+    public static $simpleContactProperties = array(
+        PidLidFileUnder, PidLidEmail1EmailAddress,
+    );
+
     public static $full_contact_properties = array(
         PidTagDisplayName,PidTagNickname,PidTagGeneration,PidTagDisplayNamePrefix,
         PidTagGivenName,PidTagSurname,PidTagMiddleName,PidTagTitle,
@@ -159,24 +163,20 @@ class OcContactsParser
     {
         $contact = array();
 
-        $i = 0;
         foreach ($properties as $prop => $field) {
-            $ocProp = self::$full_contact_properties[$i];
-            $rcubeProps = self::$oc2RcPropTranslation[$ocProp];
+            $rcubeProps = self::$oc2RcPropTranslation[$prop];
 
             if ($field) {
                 if ($rcubeProps['subfield']) {
-                    $key = self::parseOcProp2RcKey($ocProp);
-                    $value = self::parseOcProp2RcValue($ocProp, $field);
+                    $key = self::parseOcProp2RcKey($prop);
+                    $value = self::parseOcProp2RcValue($prop, $field);
                     $contact[$key][$rcubeProps['subfield']] = $value;
                 } else {
-                    $key = self::parseOcProp2RcKey($ocProp);
-                    $value = self::parseOcProp2RcValue($ocProp, $field);
+                    $key = self::parseOcProp2RcKey($prop);
+                    $value = self::parseOcProp2RcValue($prop, $field);
                     $contact[$key] = $value;
                 }
             }
-
-            $i++;
         }
 
         return $contact;

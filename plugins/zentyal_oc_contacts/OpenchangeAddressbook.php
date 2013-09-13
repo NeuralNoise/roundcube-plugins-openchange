@@ -88,6 +88,19 @@ class OpenchangeAddressbook extends rcube_addressbook
             $this->ocContacts = $this->mailbox->contacts();
             $this->debug_msg( "5");
 
+/*            $contactsTable = call_user_func_array(
+                array($this->ocContacts, 'getMessageTable'),
+                OcContactsParser::$simpleContactProperties
+            );
+            $this->debug_msg( "6");
+            $this->contacts = array();
+            $messages = $contactsTable->summary();
+
+            foreach ($messages as $message) {
+                $record = OcContactsParser::simpleOcContact2Rc($message);
+                array_push($this->contacts, $record);
+            }
+*/
             $contactsTable =  $this->ocContacts->getMessageTable();
             $this->debug_msg( "6");
             $this->contacts = array();
@@ -96,7 +109,8 @@ class OpenchangeAddressbook extends rcube_addressbook
                 $record = array();
                 $record['email'] = $message->get(PidLidEmail1EmailAddress);
                 $record['id'] = $message->getID();
-                $record['cardName'] = $message->get(PidTagSurname);
+                $record['cardName'] = $message->get(PidLidFileUnder);
+
                 array_push($this->contacts, $record);
             }
             $this->debug_msg( "7");
@@ -200,8 +214,6 @@ class OpenchangeAddressbook extends rcube_addressbook
 
             $i++;
         }
-        ob_start();var_dump($this->result);
-        $this->debug_msg(ob_get_clean());
         return $this->result;
     }
 
@@ -277,8 +289,6 @@ class OpenchangeAddressbook extends rcube_addressbook
     {
         $contact = array();
 
-        //$OcContactId = OcContactsParser::getContactId($id, "/", true);
-        //$fetchedContact = $contacts->openMessage($contactId);
         $OcContact = $this->ocContacts->openMessage($id);
 
         $propsToGet = OcContactsParser::$full_contact_properties;
@@ -310,6 +320,10 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         }
 
+        foreach ($properties as $prop) {
+            $this->debug_msg($prop . ",");
+        }
+        $this->debug_msg("\n");
         $i = 0;
         foreach ($properties as $prop) {
             if ($i == 1) {
@@ -325,10 +339,11 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         $OcContact = $this->ocContacts->openMessage($id, 1);
         $setResult = OcContactsParser::setProperties($OcContact, $properties);
+        $OcContact->save();
 
         $this->result = null;  // clear current result (from get_record())
 
-        return $setResult;
+        return count($properties);
     }
 
 
