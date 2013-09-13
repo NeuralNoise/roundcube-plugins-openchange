@@ -79,23 +79,23 @@ class OcContactsParser
             PidTagAssistantTelephoneNumber  => array('field' => 'phone:assistant', 'isArray' => True, 'subfield' => False),
             PidTagOtherTelephoneNumber      => array('field' => 'phone:other', 'isArray' => True, 'subfield' => False),
 
-            PidTagHomeAddressStreet             => array('field' => 'address:home', 'isArray' => False, 'street'),
-            PidTadLidWorkAddressStreet          => array('field' => 'address:work', 'isArray' => False, 'street'),
-            PidTagOtherAddressStreet            => array('field' => 'address:other', 'isArray' => False, 'street'),
-            PidTagHomeAddressCity               => array('field' => 'address:home', 'isArray' => False, 'locality'),
-            PidLidWorkAddressCity               => array('field' => 'address:work', 'isArray' => False, 'locality'),
-            PidTagOtherAddressCity              => array('field' => 'address:other', 'isArray' => False, 'locality'),
-            TagHomeAddressPostalCode            => array('field' => 'address:home', 'isArray' => False, 'zipcode'),
-            PidLidWorkAddressPostalCode         => array('field' => 'address:work', 'isArray' => False, 'zipcode'),
-            PidTagOtherAddressPostalCode        => array('field' => 'address:other', 'isArray' => False, 'zipcode'),
-            PidTagHomeAddressStateOrProvince    => array('field' => 'address:home', 'isArray' => False, 'region'),
-            PidLidWorkAddressState              => array('field' => 'address:work', 'isArray' => False, 'region'),
-            PidTagOtherAddressStateOrProvince   => array('field' => 'address:other', 'isArray' => False, 'region'),
-            PidTagHomeAddressCountry            => array('field' => 'address:home', 'isArray' => False, 'country'),
-            PidLidWorkAddressCountry            => array('field' => 'address:work', 'isArray' => False, 'country'),
-            PidTagOtherAddressCountry           => array('field' => 'address:other', 'isArray' => False, 'country'),
+            PidTagHomeAddressStreet             => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'street'),
+            PidTadLidWorkAddressStreet          => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'street'),
+            PidTagOtherAddressStreet            => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'street'),
+            PidTagHomeAddressCity               => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'locality'),
+            PidLidWorkAddressCity               => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'locality'),
+            PidTagOtherAddressCity              => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'locality'),
+            PidTagHomeAddressPostalCode         => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'zipcode'),
+            PidLidWorkAddressPostalCode         => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'zipcode'),
+            PidTagOtherAddressPostalCode        => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'zipcode'),
+            PidTagHomeAddressStateOrProvince    => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'region'),
+            PidLidWorkAddressState              => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'region'),
+            PidTagOtherAddressStateOrProvince   => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'region'),
+            PidTagHomeAddressCountry            => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'country'),
+            PidLidWorkAddressCountry            => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'country'),
+            PidTagOtherAddressCountry           => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'country'),
 
-            PidLidInstantMessagingAddress => array('field' => 'im:other', 'isArray' => False, 'subfield' => False),
+            PidLidInstantMessagingAddress => array('field' => 'im:other', 'isArray' => True, 'subfield' => False),
 
             PidTagPersonalHomePage  => array('field' => 'website:home', 'isArray' => True, 'subfield' => False),
             PidTagBusinessHomePage  => array('field' => 'website:work', 'isArray' => True, 'subfield' => False),
@@ -141,14 +141,18 @@ class OcContactsParser
         return $result_contact;
     }
 
-    public static function getProperties($fetchedContact, $full_contact_properties)
+    public static function getProperties($fetchedContact, $properties)
     {
-        $contactProperties = call_user_func_array(
-                array($fetchedContact, 'get'),
-                $full_contact_properties);
-
+        $contactProperties = call_user_func_array(array($fetchedContact, 'get'), $properties);
 
         return $contactProperties;
+    }
+
+    public static function setProperties($fetchedContact, $properties)
+    {
+        $setResult = call_user_func_array(array($fetchedContact, 'set'), $properties);
+
+       return $setResult;
     }
 
     public static function oc2RcParseProps($properties)
@@ -178,20 +182,64 @@ class OcContactsParser
         return $contact;
     }
 
-    public static function parseRc2OcProp($rcubeKey)
+    public static function parseRc2OcProp($rcubeField, $value)
+    {
+        $property = array();
+
+        list($ocProp, $rcubeProps) = self::parseRc2OcKey($rcubeField);
+
+        if ($rcubeProps['isArray'])
+            $value = $value[0];
+
+        if ($rcubeProps['subfield'] != False) {
+            foreach ($value as $subfield => $subvalue) {
+                list($ocProp, $rcubeProps) = self::parseRc2OcKey($rcubeField, $subfield);
+                $value = self::parseRc2OcValue($rcubeField, $subvalue, $subfield);
+                if ($value){
+                    array_push($property, $ocProp, $value);
+                }
+            }
+        } else {
+            $value = self::parseRc2OcValue($rcubeField, $value);
+            if ($value) {
+                array_push($property, $ocProp, $value);
+            }
+        }
+
+        return $property;
+
+    }
+
+    public static function parseRc2OcKey($rcubeField, $subfield=False)
     {
         $ocProp = 0;
 
-        foreach (self::$oc2RcPropTranslation as $ochange => $rcube) {
-            if (strpos($rcube, $rcubeKey)) {
-                $ocProp = $ochange;
+        foreach (self::$oc2RcPropTranslation as $prop => $rcubeProps) {
+            if ($rcubeField == $rcubeProps['field']) {
+                if ($subfield) {
+                    if ($subfield == $rcubeProps['subfield']){
+                        $ocProp = $prop;
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+
+                $ocProp = $prop;
                 break;
             }
         }
 
-        return $ocProp;
+        return array($ocProp, $rcubeProps);
     }
 
+    public static function parseRc2OcValue($rcubeField, $value, $subfield=False)
+    {
+        if (is_array($value))
+            return serialize($value);
+        else
+            return $value;
+    }
 
     private static function parseOcProp2RcKey($key)
     {

@@ -200,6 +200,8 @@ class OpenchangeAddressbook extends rcube_addressbook
 
             $i++;
         }
+        ob_start();var_dump($this->result);
+        $this->debug_msg(ob_get_clean());
         return $this->result;
     }
 
@@ -281,7 +283,7 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         $propsToGet = OcContactsParser::$full_contact_properties;
         $properties = OcContactsParser::getProperties($OcContact, $propsToGet);
-        $contact = OcContactsParser::Oc2RcParseProps($properties);
+        $contact = OcContactsParser::oc2RcParseProps($properties);
         $contact['ID'] = $id;
 
         return $contact;
@@ -296,19 +298,37 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     function update($id, $save_cols)
     {
+        $this->debug_msg( "\nStarting update id = " . $id . "\n");
         $updated = false;
+        $properties = array();
+
         $record = $this->get_record($id, true);
-//        $save_cols = $this->convert_save_data($save_cols, $record);
 
         foreach ($save_cols as $col => $value) {
-            $this->debug_msg( "col: " . $col . " | value: " . $value . "\n");
+            $property = OcContactsParser::parseRc2OcProp($col, $value);
+            $properties = array_merge($property, $properties);
+
         }
 
+        $i = 0;
+        foreach ($properties as $prop) {
+            if ($i == 1) {
+                $this->debug_msg(" => ");
+                $i = 0;
+            } else {
+                $this->debug_msg("\n");
+                $i = 1;
+            }
+
+            $this->debug_msg($prop);
+        }
+
+        $OcContact = $this->ocContacts->openMessage($id, 1);
+        $setResult = OcContactsParser::setProperties($OcContact, $properties);
 
         $this->result = null;  // clear current result (from get_record())
 
-        //TODO: Obviously, this can be false :-) return $updated;
-        return true;
+        return $setResult;
     }
 
 
