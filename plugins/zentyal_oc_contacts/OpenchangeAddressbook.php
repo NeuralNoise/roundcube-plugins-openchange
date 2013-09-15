@@ -327,6 +327,36 @@ class OpenchangeAddressbook extends rcube_addressbook
         return count($properties);
     }
 
+    /**
+     * Create a new contact record
+     *
+     * @param array Associative array with save data
+     * @return integer|boolean The created record ID on success, False on error
+     */
+    function insert($save_data, $check=false)
+    {
+        $this->debug_msg( "\nStarting insert id = " . $id . "\n");
+        $updated = false;
+        $properties = array();
+
+        foreach ($save_data as $col => $value) {
+            $property = OcContactsParser::parseRc2OcProp($col, $value);
+            $properties = array_merge($property, $properties);
+        }
+
+        foreach ($properties as $prop) {
+            $rcubeProps = OcContactsParser::$oc2RcPropTranslation[979173407];
+            $this->debug_msg(serialize($rcubeProps) . "\n");
+            ob_start(); var_dump($prop);
+            $this->debug_msg(ob_get_clean());
+        }
+
+        $createResult = OcContactsParser::createWithProperties($this->ocContacts, $properties);
+        $this->debug_msg( "\nEnding insert id = " . $createResult . "\n");
+
+        return $createResult ? $createResult : $False;
+
+    }
 
     function create_group($name)
     {
