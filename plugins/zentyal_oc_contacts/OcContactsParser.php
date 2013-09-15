@@ -59,7 +59,7 @@ class OcContactsParser
             PidTagCompanyName       => array('field' => 'organization', 'isArray' => False, 'subfield' => False),
 
             /* 0 unespecified, 1 female, 2 male */
-            PidTagGender                => array('field' => 'gender', 'isArray' => False, 'subfield' => False),
+            PidTagGender                => array('field' => 'gender', 'isArray' => False, 'subfield' => False, 'parsingFunc' => 'parseGender'),
             PidTagAssistant             => array('field' => 'assistant', 'isArray' => False, 'subfield' => False),
             PidTagManagerName           => array('field' => 'manager', 'isArray' => False, 'subfield' => False),
             PidTagSpouseName            => array('field' => 'spouse', 'isArray' => False, 'subfield' => False),
@@ -159,6 +159,11 @@ class OcContactsParser
        return $setResult;
     }
 
+    public static function createWithProperties($contacts, $properties)
+    {
+        return call_user_func_array(array($contacts, 'createMessage'), $properties);
+    }
+
     public static function oc2RcParseProps($properties)
     {
         $contact = array();
@@ -194,14 +199,14 @@ class OcContactsParser
         if ($rcubeProps['subfield'] != False) {
             foreach ($value as $subfield => $subvalue) {
                 list($ocProp, $rcubeProps) = self::parseRc2OcKey($rcubeField, $subfield);
-                $value = self::parseRc2OcValue($rcubeField, $subvalue, $subfield);
                 if ($value){
+                    $value = self::parseRc2OcValue($rcubeProps, $subvalue, $subfield);
                     array_push($property, $ocProp, $value);
                 }
             }
         } else {
-            $value = self::parseRc2OcValue($rcubeField, $value);
             if ($value) {
+                $value = self::parseRc2OcValue($rcubeProps, $value);
                 array_push($property, $ocProp, $value);
             }
         }
@@ -233,12 +238,17 @@ class OcContactsParser
         return array($ocProp, $rcubeProps);
     }
 
-    public static function parseRc2OcValue($rcubeField, $value, $subfield=False)
+    public static function parseRc2OcValue($rcubeProps, $value, $subfield=False)
     {
         if (is_array($value))
-            return serialize($value);
-        else
-            return $value;
+            $value = $value[0];
+
+        if (array_key_exists('parsingFunc', $rcubeProps)) {
+            $func = $rcubeProps['parsingFunc'] . "Rc2Oc";
+            $value = call_user_func_array(array(self, $func), array($value));
+        }
+
+        return $value;
     }
 
     private static function parseOcProp2RcKey($key)
@@ -257,6 +267,17 @@ class OcContactsParser
                 return array($value);
 
         return $value;
+    }
+
+    /* Single fields value parsing */
+    private static function parseGenderRc2Oc($genderRC)
+    {
+        switch($genderRC) {
+            case "female":    return 1;
+            case "male":    return 2;
+        }
+
+        return 0;
     }
 }
 ?>
