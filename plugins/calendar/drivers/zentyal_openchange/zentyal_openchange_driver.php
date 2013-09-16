@@ -23,13 +23,15 @@
  */
 
 
+require_once(dirname(__FILE__) . '/../../lib/OCParsing.php');
+
 class zentyal_openchange_driver extends calendar_driver
 {
     const DB_DATE_FORMAT = 'Y-m-d H:i:s';
 
     // features this backend supports
-    public $alarms = true;
-    public $attendees = true;
+    public $alarms = false;
+    public $attendees = false;
     public $freebusy = true;
     public $attachments = false;
     public $alarm_types = array('DISPLAY');
@@ -49,13 +51,17 @@ class zentyal_openchange_driver extends calendar_driver
     private $db_colors = 'colors';
 
     private $handle;
+    private $debug = true;
+    private $file = '/var/log/roundcube/my_debug.txt';
     private $oc_enabled = true;
 
-    private $calendar;
+    private $ocCalendar;
     private $mailbox;
     private $session;
     private $mapiProfile;
     private $mapi;
+
+    private $events = array();
 
 
     /**
@@ -63,16 +69,16 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function __destruct()
     {
-        fwrite($this->handle, "\nError => Starting the destructor\n");
+        $this->debug_msg("\nError => Starting the destructor\n");
         if ($this->oc_enabled) {
-            fwrite($this->handle, "Destructing MAPI objects\n");
-            unset($this->calendar);
+            $this->debug_msg("Destructing MAPI objects\n");
+            unset($this->ocCalendar);
             unset($this->mailbox);
             unset($this->session);
             unset($this->mapiProfile);
             unset($this->mapi);
         }
-        fwrite($this->handle, "\nError => Exiting the destructor\n");
+        $this->debug_msg("\nError => Exiting the destructor\n");
         fclose($this->handle);
     }
 
@@ -81,9 +87,8 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function __construct($cal)
     {
-        $file = '/var/log/roundcube/my_debug.txt';
-        $this->handle = fopen($file, 'a');
-        fwrite($this->handle, "\nError => Starting the contructor\n");
+        $this->handle = fopen($this->file, 'a');
+        $this->debug_msg("\nError => Starting the contructor\n");
 
         //Creating the OC binding
         /* TODO: Defensive code here */
@@ -92,7 +97,23 @@ class zentyal_openchange_driver extends calendar_driver
             $this->mapiProfile = $this->mapi->getProfile('test');
             $this->session = $this->mapiProfile->logon();
             $this->mailbox = $this->session->mailbox();
-            $this->calendar = $this->mailbox->calendar();
+            $this->ocCalendar = $this->mailbox->calendar();
+
+            $table = $this->ocCalendar->getMessageTable();
+            $messages = $table->getMessages();
+
+            foreach ($messages as $message) {
+                $record = array();
+                foreach (OCParsing::$fullEventProperties as $prop) {
+                    $record[$prop] = $message->get($prop);
+                }
+
+                array_push($this->events, $record);
+                $this->debug_msg(serialize($record) . "\n");
+            }
+
+            unset($messages);
+            unset($table);
         }
 
         $this->cal = $cal;
@@ -112,16 +133,23 @@ class zentyal_openchange_driver extends calendar_driver
         $this->_read_calendars();
     }
 
+    private function debug_msg($message)
+    {
+        if ($this->debug)
+            fwrite($this->handle, $message);
+    }
+
+
     /**
      * Read available calendars for the current user and store them internally
      */
     private function _read_calendars()
     {
-        fwrite($this->handle, "\nStarting _read_calendars\n");
+        $this->debug_msg("\nStarting _read_calendars\n");
 
         if ($this->oc_enabled){
-            $fakeCalendarName = $this->calendar->getName();
-            $fakeCalendarId = $this->calendar->getId();
+            $fakeCalendarName = $this->ocCalendar->getName();
+            $fakeCalendarId = $this->ocCalendar->getId();
         } else {
             $fakeCalendarName = 'my cal';
             $fakeCalendarId = '8b010d0000000001';
@@ -156,7 +184,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function list_calendars($active = false, $personal = false)
     {
-        fwrite($this->handle, "\nStarting list_calendars\n");
+        $this->debug_msg("\nStarting list_calendars\n");
         // attempt to create a default calendar for this user
         if (empty($this->calendars)) {
             $this->_read_calendars();
@@ -164,10 +192,10 @@ class zentyal_openchange_driver extends calendar_driver
 
         $calendars = $this->calendars;
 
-        fwrite($this->handle, "All the calendars to show are: \n");
+        $this->debug_msg("All the calendars to show are: \n");
         foreach ($this->calendars as $calc) {
             try {
-                fwrite($this->handle, serialize($calc) . "\n");
+                $this->debug_msg(serialize($calc) . "\n");
             } catch(Exception $e){
             }
         }
@@ -175,7 +203,7 @@ class zentyal_openchange_driver extends calendar_driver
         // If there is no color assigned to a calendar, generate it
         $this->checkAndGetCalendarsColor();
 
-        fwrite($this->handle, "How many cals: " . count($calendars) . "\n");
+        $this->debug_msg("How many cals: " . count($calendars) . "\n");
 
         // filter active calendars
         if ($active) {
@@ -185,7 +213,7 @@ class zentyal_openchange_driver extends calendar_driver
                 }
             }
         }
-        fwrite($this->handle, "Ending list_calendars\n");
+        $this->debug_msg("Ending list_calendars\n");
 
         return $calendars;
     }
@@ -197,7 +225,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function checkAndGetCalendarsColor()
     {
-        fwrite($this->handle, "\nStarting checkAndGetCalendarsColor\n");
+        $this->debug_msg("\nStarting checkAndGetCalendarsColor\n");
         // Look for the colors associated with the given calendars
         // 1st => Build the WHERE SQL clause
         $whereClause = "";
@@ -213,14 +241,14 @@ class zentyal_openchange_driver extends calendar_driver
         $query = "SELECT * FROM " . $this->db_colors. "
                 WHERE " . $whereClause;
         $calendarColors= $this->rc->db->query($query);
-        fwrite($this->handle, "The colors query is: " . $query . "\n");
-        fwrite($this->handle, "The colors query where clause is: " . $whereClause . "\n");
+        $this->debug_msg("The colors query is: " . $query . "\n");
+        $this->debug_msg("The colors query where clause is: " . $whereClause . "\n");
 
         while ($calendarColors && ($arr = $this->rc->db->fetch_assoc($calendarColors))) {
             $colors[$arr['calendar_id']] = $arr;
         }
 
-        fwrite($this->handle, "The colors are: " . serialize($colors) . "\n");
+        $this->debug_msg("The colors are: " . serialize($colors) . "\n");
 
         // If we have found a color, add it to the calendar, or generate it
 
@@ -234,7 +262,7 @@ class zentyal_openchange_driver extends calendar_driver
             }
         }
 
-        fwrite($this->handle, "Ending checkAndGetCalendarsColor\n");
+        $this->debug_msg("Ending checkAndGetCalendarsColor\n");
     }
 
     /**
@@ -247,7 +275,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function create_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting create_calendar\n");
+        $this->debug_msg("\nStarting create_calendar\n");
         $result = $this->rc->db->query(
                 "INSERT INTO " . $this->db_calendars . "
                 (user_id, name, color, showalarms)
@@ -264,7 +292,7 @@ class zentyal_openchange_driver extends calendar_driver
         $colorResult = $this->rc->db->insert_id($this->colors);
 
         if ($colorResult)
-            fwrite($this->handle, "Color " . $colorResult . " has been created\n");
+            $this->debug_msg("Color " . $colorResult . " has been created\n");
 
         if ($result)
             return $this->rc->db->insert_id($this->db_calendars);
@@ -277,7 +305,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function createColor($calendar, $user, $color=NULL)
     {
-        fwrite($this->handle, "\nStarting createColor\n");
+        $this->debug_msg("\nStarting createColor\n");
         if (! $color) {
             $color = $this->generateColorFromId($calendar);
         }
@@ -308,7 +336,7 @@ class zentyal_openchange_driver extends calendar_driver
             $idNumber = round($idNumber / (100^$i));
         }
 
-        fwrite($this->handle, "The generated color is: " . $color . "\n");
+        $this->debug_msg("The generated color is: " . $color . "\n");
 
         return $color;
     }
@@ -320,7 +348,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function edit_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting edit_calendar\n");
+        $this->debug_msg("\nStarting edit_calendar\n");
         $query = $this->rc->db->query(
                 "UPDATE " . $this->db_calendars . "
                 SET   name=?, color=?, showalarms=?
@@ -345,7 +373,7 @@ class zentyal_openchange_driver extends calendar_driver
 
         $colorResult = $this->rc->db->affected_rows($colorQuery);
         if ($colorResult)
-            fwrite($this->handle, "Colors affected: " . $colorResult . "\n");
+            $this->debug_msg("Colors affected: " . $colorResult . "\n");
 
         return $this->rc->db->affected_rows($query);
     }
@@ -358,7 +386,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function subscribe_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting subscribe_calendar\n");
+        $this->debug_msg("\nStarting subscribe_calendar\n");
         $hidden = array_flip(explode(',', $this->rc->config->get('hidden_calendars', '')));
 
         if ($prop['active'])
@@ -376,7 +404,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function remove_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting remove_calendar\n");
+        $this->debug_msg("\nStarting remove_calendar\n");
         if (!$this->calendars[$prop['id']])
             return false;
 
@@ -396,7 +424,7 @@ class zentyal_openchange_driver extends calendar_driver
 
         $colorResult = $this->rc->db->affected_rows($colorQuery);
         if ($colorResult)
-            fwrite($this->handle, "Colors affected: " . $colorResult . "\n");
+            $this->debug_msg("Colors affected: " . $colorResult . "\n");
 
         return $this->rc->db->affected_rows($query);
     }
@@ -409,7 +437,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function new_event($event)
     {
-        fwrite($this->handle, "\nStarting new_event\n");
+        $this->debug_msg("\nStarting new_event\n");
         if (!$this->validate($event))
             return false;
 
@@ -479,7 +507,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function edit_event($event)
     {
-        fwrite($this->handle, "\nStarting edit_event\n");
+        $this->debug_msg("\nStarting edit_event\n");
         if (!empty($this->calendars)) {
             $update_master = false;
             $update_recurring = true;
@@ -585,7 +613,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _save_preprocess($event)
     {
-        fwrite($this->handle, "\nStarting _save_preprocess\n");
+        $this->debug_msg("\nStarting _save_preprocess\n");
         // shift dates to server's timezone
         $event['start'] = clone $event['start'];
         $event['start']->setTimezone($this->server_timezone);
@@ -626,7 +654,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _get_notification($event)
     {
-        fwrite($this->handle, "\nStarting _get_notification\n");
+        $this->debug_msg("\nStarting _get_notification\n");
         if ($event['alarms'] && $event['start'] > new DateTime()) {
             $alarm = libcalendaring::get_next_alarm($event);
 
@@ -645,7 +673,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _update_event($event, $update_recurring = true)
     {
-        fwrite($this->handle, "\nStarting _update_event\n");
+        $this->debug_msg("\nStarting _update_event\n");
         $event = $this->_save_preprocess($event);
         $sql_set = array();
         $set_cols = array('start', 'end', 'all_day', 'recurrence_id', 'sequence', 'title', 'description', 'location', 'categories', 'url', 'free_busy', 'priority', 'sensitivity', 'attendees', 'alarms', 'notifyat');
@@ -704,7 +732,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _update_recurring($event)
     {
-        fwrite($this->handle, "\nStarting _update_recurring\n");
+        $this->debug_msg("\nStarting _update_recurring\n");
         if (empty($this->calendars))
             return;
 
@@ -765,9 +793,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function move_event($event)
     {
-        fwrite($this->handle, "\nStarting more_event\n");
+        $this->debug_msg("\nStarting more_event\n");
         ob_start();var_dump($event);
-        fwrite($this->handle, ob_get_clean() . "\n");
+        $this->debug_msg(ob_get_clean() . "\n");
         // let edit_event() do all the magic
         return $this->edit_event($event + (array)$this->get_event($event));
     }
@@ -780,7 +808,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function resize_event($event)
     {
-        fwrite($this->handle, "\nStarting resize_event\n");
+        $this->debug_msg("\nStarting resize_event\n");
         // let edit_event() do all the magic
         return $this->edit_event($event + (array)$this->get_event($event));
     }
@@ -795,9 +823,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function remove_event($event, $force = true)
     {
-        fwrite($this->handle, "\nStarting remove_event\n");
+        $this->debug_msg("\nStarting remove_event\n");
         ob_start();var_dump($event);
-        fwrite($this->handle, ob_get_clean() . "\n");
+        $this->debug_msg(ob_get_clean() . "\n");
         if (!empty($this->calendars)) {
             $event += (array)$this->get_event($event);
             $master = $event;
@@ -879,7 +907,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function get_event($event, $writeable = false, $active = false, $personal = false)
     {
-        fwrite($this->handle, "\nStarting get_event\n");
+        $this->debug_msg("\nStarting get_event\n");
         $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
         $col = is_array($event) && is_numeric($id) ? 'event_id' : 'uid';
 
@@ -887,7 +915,7 @@ class zentyal_openchange_driver extends calendar_driver
         if ($calendarTable->count() > 0){
             $event = $calendarTable->summary(1);
             ob_start();var_dump($event);
-            fwrite($this->handle, ob_get_clean() . "\n");
+            $this->debug_msg(ob_get_clean() . "\n");
         }
 
         return $event;
@@ -900,17 +928,17 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function load_events($start, $end, $query = null, $calendars = null)
     {
-        fwrite($this->handle, "\nStarting load_events\n");
+        $this->debug_msg("\nStarting load_events\n");
+        $events = array();
 
-        $calendarTable = $this->calendar->getMessageTable();
-        $count = $calendarTable->count();
-        while ($count >0) {
-            $event = $calendarTable->summary(1);
-            $event = $this->buildEventFromProperties($event);
-            array_push($events, $calendarTable->summary(1));
-            $count --;
+        foreach ($this->events as $event) {
+            $tempEvent = OCParsing::parseEventOc2Rc($event);
+            array_push($events, $tempEvent);
         }
-        unset($calendarTable);
+
+        ob_start(); var_dump($events);
+        $this->debug_msg(ob_get_clean());
+        $this->debug_msg("Ending load_events\n");
 
         return $events;
     }
@@ -940,7 +968,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _read_postprocess($event)
     {
-        fwrite($this->handle, "\nStarting _read_postprocess\n");
+        $this->debug_msg("\nStarting _read_postprocess\n");
         $free_busy_map = array_flip($this->free_busy_map);
         $sensitivity_map = array_flip($this->sensitivity_map);
 
@@ -997,7 +1025,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function pending_alarms($time, $calendars = null)
     {
-        fwrite($this->handle, "\nStarting pending_alarms\n");
+        $this->debug_msg("\nStarting pending_alarms\n");
         if (empty($calendars))
             $calendars = array_keys($this->calendars);
         else if (is_string($calendars))
@@ -1037,7 +1065,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function dismiss_alarm($event_id, $snooze = 0)
     {
-        fwrite($this->handle, "\nStarting dismiss_alarm\n");
+        $this->debug_msg("\nStarting dismiss_alarm\n");
         // set new notifyat time or unset if not snoozed
         $notify_at = $snooze > 0 ? date(self::DB_DATE_FORMAT, time() + $snooze) : null;
 
@@ -1059,7 +1087,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function add_attachment($attachment, $event_id)
     {
-        fwrite($this->handle, "\nStarting add_attachment\n");
+        $this->debug_msg("\nStarting add_attachment\n");
         $data = $attachment['data'] ? $attachment['data'] : file_get_contents($attachment['path']);
 
         $query = $this->rc->db->query(
@@ -1081,7 +1109,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function remove_attachment($attachment_id, $event_id)
     {
-        fwrite($this->handle, "\nStarting remove_attachment\n");
+        $this->debug_msg("\nStarting remove_attachment\n");
         $query = $this->rc->db->query(
                 "DELETE FROM " . $this->db_attachments .
                 " WHERE attachment_id = ?" .
@@ -1100,7 +1128,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function list_attachments($event)
     {
-        fwrite($this->handle, "\nStarting list_attachments\n");
+        $this->debug_msg("\nStarting list_attachments\n");
         $attachments = array();
 
         if (!empty($this->calendar_ids)) {
@@ -1127,7 +1155,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function get_attachment($id, $event)
     {
-        fwrite($this->handle, "\nStarting get_attachment\n");
+        $this->debug_msg("\nStarting get_attachment\n");
         if (!empty($this->calendar_ids)) {
             $result = $this->rc->db->query(
                     "SELECT attachment_id AS id, filename AS name, mimetype, size " .
@@ -1151,7 +1179,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function get_attachment_body($id, $event)
     {
-        fwrite($this->handle, "\nStarting get_attachment_body\n");
+        $this->debug_msg("\nStarting get_attachment_body\n");
         if (!empty($this->calendar_ids)) {
             $result = $this->rc->db->query(
                     "SELECT data " .
@@ -1175,7 +1203,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function remove_category($name)
     {
-        fwrite($this->handle, "\nStarting remove_category\n");
+        $this->debug_msg("\nStarting remove_category\n");
         $query = $this->rc->db->query(
                 "UPDATE " . $this->db_events . "
                 SET   categories=''
@@ -1192,7 +1220,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function replace_category($oldname, $name, $color)
     {
-        fwrite($this->handle, "\nStarting replace_category\n");
+        $this->debug_msg("\nStarting replace_category\n");
         $query = $this->rc->db->query(
                 "UPDATE " . $this->db_events . "
                 SET   categories=?

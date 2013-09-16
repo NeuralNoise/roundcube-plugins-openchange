@@ -1,20 +1,35 @@
 <?php
 class OCParsing
 {
-    public static $ocDate = "Mon Jun  1 18:00:00 2071 UTC";
+    public static $fullEventProperties = array(
+        PidTagOriginalSubject, PidTagHasAttachments, PidLidBusyStatus, PidLidLocation,
+        PidLidAppointmentStartWhole, PidLidAppointmentEndWhole, PidNameKeywords,
+        PidLidAppointmentSubType, PidTagLastModificationTime, PidLidAllAttendeesString,
+        PidLidAppointmentRecur,
+    );
 
+    //TODO: Qué hacer con PidLidCommoni{Start/End} & PidTag{Start/End}Date
+    public static $eventTranslationTable = array(
+        //PidLidResponseStatus,PidLidRecurring
+        PidTagOriginalSubject       => array('field' => 'title'),
+        PidTagHasAttachments        => array('field' => False),
+        PidLidBusyStatus            => array('field' => 'free_busy', 'parsingFunc' => 'parseBusy'),
+        PidLidLocation              => array('field' => 'location'),
+        PidLidAppointmentStartWhole => array('field' => 'start', 'parsingFunc' => 'parseDate'),
+        PidLidAppointmentEndWhole   => array('field' => 'end', 'parsingFunc' => 'parseDate'),
+        PidNameKeywords             => array('field' => 'categories'), //ptypmultiplestring
+        PidLidAppointmentSubType    => array('field' => 'allday'),
+        PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
+        PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
+        PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
+    );
 
-    /**
-     * Converts a given date obtained from OChange stores to a DateTime object
-     * used by RCube
-     *
-     * @param string $date The date we want to convert
-     *
-     * @return DateTime The converted date
-     */
-    public static function parse_oc_date($date){
-        return new DateTime($date);
-    }
+    private static $busyTranslation = array(
+        0 => 'Free',
+        1 => 'Tentative',
+        2 => 'Busy',
+        3 => 'Out of Office',
+    );
 
     /**
      * Returns a simple message ID from a composed one
@@ -34,14 +49,59 @@ class OCParsing
         return $ids[1];
     }
 
-    public static $event_dict = array(
-        'location'          => PidLidLocation,
-        'categories'        => PidNameKeywords,
-        'allday'            => PidLidAppointmentSubType,
-        //TODO 'recurrence'        => PidLidIsRecurring,
-        'start'             => array(PidLidClipStart,array('OCParsing', 'parse_oc_date')),
-        'end'               => array(PidLidClipEnd,array('OCParsing', 'parse_oc_date')),
-    );
+    public static function parseEventOc2Rc($event)
+    {
+        $result = array();
+
+        foreach ($event as $prop => $value) {
+            $key = self::parseOc2RcKey($prop);
+            $value = self::parseOc2RcValue($prop, $value);
+
+            $result[$key] = $value;
+        }
+
+        return $result;
+    }
+
+    private static function parseOc2RcKey($ocProp)
+    {
+        if (array_key_exists($ocProp, self::$eventTranslationTable)) {
+            $rcubeEventProps = self::$eventTranslationTable[$ocProp];
+            return $rcubeEventProps['field'];
+        }
+
+        return False;
+    }
+
+    private static function parseOc2RcValue($ocProp, $value)
+    {
+        if (array_key_exists($ocProp, self::$eventTranslationTable)) {
+            $rcubeEventProps = self::$eventTranslationTable[$ocProp];
+            if (array_key_exists('parsingFunc', $rcubeEventProps)) {
+                $func = $rcubeEventProps['parsingFunc'] . "Oc2Rc";
+                $value = call_user_func_array(array(self, $func), array($value));
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Converts a given date obtained from OChange stores to a DateTime object
+     * used by RCube
+     *
+     * @param string $date The date we want to convert
+     *
+     * @return DateTime The converted date
+     */
+    private static function parseDateOc2Rc($date){
+        return new DateTime($date);
+    }
+
+    private static function parseBusyOc2Rc($state)
+    {
+        return self::$busyTranslation[$state];
+    }
+
 }
-var_dump(call_user_func_array(OCParsing::$event_dict['start'][1], array(OCParsing::$ocDate)));
 ?>
