@@ -45,9 +45,6 @@ class zentyal_openchange_driver extends calendar_driver
     private $sensitivity_map = array('public' => 0, 'private' => 1, 'confidential' => 2);
     private $server_timezone;
 
-    private $db_events = 'events';
-    private $db_calendars = 'calendars';
-    private $db_attachments = 'attachments';
     private $db_colors = 'colors';
 
     private $handle;
@@ -276,15 +273,6 @@ class zentyal_openchange_driver extends calendar_driver
     public function create_calendar($prop)
     {
         $this->debug_msg("\nStarting create_calendar\n");
-        $result = $this->rc->db->query(
-                "INSERT INTO " . $this->db_calendars . "
-                (user_id, name, color, showalarms)
-                VALUES (?, ?, ?, ?)",
-                $this->rc->user->ID,
-                $prop['name'],
-                $prop['color'],
-                $prop['showalarms']?1:0
-                );
 
         // Creating a custom color entry for the calendar
         $calendarId = $this->rc->db->insert_id($this->db_calendars);
@@ -349,17 +337,6 @@ class zentyal_openchange_driver extends calendar_driver
     public function edit_calendar($prop)
     {
         $this->debug_msg("\nStarting edit_calendar\n");
-        $query = $this->rc->db->query(
-                "UPDATE " . $this->db_calendars . "
-                SET   name=?, color=?, showalarms=?
-                WHERE calendar_id=?
-                AND   user_id=?",
-                $prop['name'],
-                $prop['color'],
-                $prop['showalarms']?1:0,
-                $prop['id'],
-                $this->rc->user->ID
-                );
 
         $colorQuery = $this->rc->db->query(
                 "UPDATE " . $this->db_colors . "
@@ -375,7 +352,7 @@ class zentyal_openchange_driver extends calendar_driver
         if ($colorResult)
             $this->debug_msg("Colors affected: " . $colorResult . "\n");
 
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -407,14 +384,6 @@ class zentyal_openchange_driver extends calendar_driver
         $this->debug_msg("\nStarting remove_calendar\n");
         if (!$this->calendars[$prop['id']])
             return false;
-
-        // events and attachments will be deleted by foreign key cascade
-
-        $query = $this->rc->db->query(
-                "DELETE FROM " . $this->db_calendars . "
-                WHERE calendar_id=?",
-                $prop['id']
-                );
 
         $colorQuery = $this->rc->db->query(
                 "DELETE FROM " . $this->db_colors . "
