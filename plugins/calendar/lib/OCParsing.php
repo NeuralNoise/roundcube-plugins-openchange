@@ -5,7 +5,8 @@ class OCParsing
         PidTagOriginalSubject, PidTagHasAttachments, PidLidBusyStatus, PidLidLocation,
         PidLidAppointmentStartWhole, PidLidAppointmentEndWhole, PidNameKeywords,
         PidLidAppointmentSubType, PidTagLastModificationTime, PidLidAllAttendeesString,
-        PidLidAppointmentRecur,
+        PidTagBody, PidTagSensitivity, PidTagPriority,
+        //PidLidAppointmentRecur,
     );
 
     //TODO: Qué hacer con PidLidCommoni{Start/End} & PidTag{Start/End}Date
@@ -22,6 +23,9 @@ class OCParsing
         PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
         PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
         PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
+        PidTagBody                  => array('field' => 'description'),
+        PidTagSensitivity           => array('field' => 'sensivity'),
+        PidTagPriority              => array('field' => 'priority'),
     );
 
     private static $busyTranslation = array(
