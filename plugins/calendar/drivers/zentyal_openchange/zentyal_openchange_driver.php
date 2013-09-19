@@ -105,8 +105,13 @@ class zentyal_openchange_driver extends calendar_driver
                     $record[$prop] = $message->get($prop);
                 }
 
+                $id = $message->getID();
+                $record['event_id'] = $id;
+                $record['uid'] = $id;
+                $record['calendar'] = $this->ocCalendar->getID();
+
                 array_push($this->events, $record);
-                $this->debug_msg(serialize($record) . "\n");
+//                $this->debug_msg(serialize($record) . "\n");
             }
 
             unset($messages);
@@ -121,11 +126,7 @@ class zentyal_openchange_driver extends calendar_driver
         require_once($this->cal->home . '/lib/Horde_Date_Recurrence.php');
 
         // read database config
-        $db = $this->rc->get_dbh();
         $this->db_colors= $this->rc->config->get('db_table_colors', 'colors');
-        $this->db_events = $this->rc->config->get('db_table_events', $db->table_name($this->db_events));
-        $this->db_calendars = $this->rc->config->get('db_table_calendars', $db->table_name($this->db_calendars));
-        $this->db_attachments = $this->rc->config->get('db_table_attachments', $db->table_name($this->db_attachments));
 
         $this->_read_calendars();
     }
@@ -144,27 +145,22 @@ class zentyal_openchange_driver extends calendar_driver
     {
         $this->debug_msg("\nStarting _read_calendars\n");
 
-        if ($this->oc_enabled){
-            $fakeCalendarName = $this->ocCalendar->getName();
-            $fakeCalendarId = $this->ocCalendar->getId();
-        } else {
-            $fakeCalendarName = 'my cal';
-            $fakeCalendarId = '8b010d0000000001';
-        }
-
+        $cal_id = $this->ocCalendar->getID();
         $calendar['showalarms'] = false;
         $calendar['active'] = true;
-        $calendar['name'] = $fakeCalendarName;
-        $calendar['id'] = $fakeCalendarId;
-        $calendar['calendar_id'] = $fakeCalendarId;
+        $calendar['name'] = $this->ocCalendar->getName();
+        $calendar['id'] = $cal_id;
+        $calendar['calendar_id'] = $cal_id;
         $calendar['user_id'] = $this->rc->user->ID;
         $calendar['readonly'] = false;
 
         $calendar_ids = array();
         array_push($calendar_ids, $calendar['id']);
 
-        $this->calendars[$calendar['id']] = $calendar;
+        $this->calendars[$calendar['calendar_id']] = $calendar;
         $this->calendar_ids = join(',', $calendar_ids);
+
+        $this->debug_msg("The calendar ids are: " . $this->calendar_ids . "\n");
 
         /* TODO: hidden calendars from config?
            $hidden = array_filter(explode(',', $this->rc->config->get('hidden_calendars', '')));
@@ -190,7 +186,8 @@ class zentyal_openchange_driver extends calendar_driver
         $calendars = $this->calendars;
 
         $this->debug_msg("All the calendars to show are: \n");
-        foreach ($this->calendars as $calc) {
+        foreach ($this->calendars as $key => $calc) {
+            $this->debug_msg("For the key: " . $key . "\n");
             try {
                 $this->debug_msg(serialize($calc) . "\n");
             } catch(Exception $e){
@@ -238,14 +235,14 @@ class zentyal_openchange_driver extends calendar_driver
         $query = "SELECT * FROM " . $this->db_colors. "
                 WHERE " . $whereClause;
         $calendarColors= $this->rc->db->query($query);
-        $this->debug_msg("The colors query is: " . $query . "\n");
-        $this->debug_msg("The colors query where clause is: " . $whereClause . "\n");
+//        $this->debug_msg("The colors query is: " . $query . "\n");
+//        $this->debug_msg("The colors query where clause is: " . $whereClause . "\n");
 
         while ($calendarColors && ($arr = $this->rc->db->fetch_assoc($calendarColors))) {
             $colors[$arr['calendar_id']] = $arr;
         }
 
-        $this->debug_msg("The colors are: " . serialize($colors) . "\n");
+//        $this->debug_msg("The colors are: " . serialize($colors) . "\n");
 
         // If we have found a color, add it to the calendar, or generate it
 
@@ -258,8 +255,6 @@ class zentyal_openchange_driver extends calendar_driver
                     $this->createColor($calendar['id'], $calendar['user_id']);
             }
         }
-
-        $this->debug_msg("Ending checkAndGetCalendarsColor\n");
     }
 
     /**
@@ -905,8 +900,7 @@ class zentyal_openchange_driver extends calendar_driver
             array_push($events, $tempEvent);
         }
 
-        ob_start(); var_dump($events);
-        $this->debug_msg(ob_get_clean());
+        $this->debug_msg(serialize($events));
         $this->debug_msg("Ending load_events\n");
 
         return $events;
