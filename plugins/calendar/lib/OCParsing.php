@@ -23,7 +23,7 @@ class OCParsing
         PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
         PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
         PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
-        PidTagBody                  => array('field' => 'description'),
+        PidTagBody                  => array('field' => 'description', 'parsingFunc' => 'removeBrackets'),
         PidTagSensitivity           => array('field' => 'sensivity'),
         PidTagPriority              => array('field' => 'priority'),
     );
@@ -74,7 +74,7 @@ class OCParsing
             return $rcubeEventProps['field'];
         }
 
-        return False;
+        return $ocProp;
     }
 
     private static function parseOc2RcValue($ocProp, $value)
@@ -98,13 +98,19 @@ class OCParsing
      *
      * @return DateTime The converted date
      */
-    private static function parseDateOc2Rc($date){
+    private static function parseDateOc2Rc($date)
+    {
         return new DateTime($date);
     }
 
     private static function parseBusyOc2Rc($state)
     {
         return self::$busyTranslation[$state];
+    }
+
+    private static function removeBracketsOc2Rc($description)
+    {
+        return ltrim($description, ')');
     }
 
 }
