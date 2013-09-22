@@ -64,6 +64,8 @@ class OCParsing
             $result[$key] = $value;
         }
 
+        $result['end'] = self::correctAllDayEndDate($result);
+
         return $result;
     }
 
@@ -113,5 +115,13 @@ class OCParsing
         return ltrim($description, ')');
     }
 
+    private static function correctAllDayEndDate($event)
+    {
+        if ($event['allday']) {
+            return $event['end']->sub(date_interval_create_from_date_string('1 day'));
+        }
+
+        return $event['end'];
+    }
 }
 ?>
