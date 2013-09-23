@@ -40,9 +40,8 @@ class OpenchangeAddressbook extends rcube_addressbook
      * This variable sets which fields can be shown or set while editing
      */
     public $coltypes = array('name', 'firstname', 'surname', 'middlename', 'prefix', 'suffix', 'nickname',
-            'jobtitle', 'organization', 'department', 'assistant', 'manager',
-            'gender', 'spouse', 'email', 'phone', 'address',
-            'birthday', 'anniversary', 'website', 'im', 'notes', 'photo');
+            'jobtitle', 'organization', 'department', 'email', 'phone', 'address',
+            'birthday', 'website', 'im', 'notes', 'photo');
 
     /**
      * Default destructor
