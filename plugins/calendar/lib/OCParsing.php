@@ -2,9 +2,13 @@
 class OCParsing
 {
     public static $fullEventProperties = array(
-        PidTagOriginalSubject, PidTagHasAttachments, PidLidBusyStatus, PidLidLocation,
-        PidLidAppointmentStartWhole, PidLidAppointmentEndWhole, PidNameKeywords,
-        PidLidAppointmentSubType, PidTagLastModificationTime, PidLidAllAttendeesString,
+        PidTagOriginalSubject,
+        //PidTagHasAttachments,
+        PidLidBusyStatus, PidLidLocation,
+        PidLidAppointmentStartWhole, PidLidAppointmentEndWhole,
+        //PidNameKeywords,
+        PidLidAppointmentSubType, PidTagLastModificationTime,
+        //PidLidAllAttendeesString,
         PidTagBody, PidTagSensitivity, PidTagPriority,
         //PidLidAppointmentRecur,
     );
@@ -13,16 +17,16 @@ class OCParsing
     public static $eventTranslationTable = array(
         //PidLidResponseStatus,PidLidRecurring
         PidTagOriginalSubject       => array('field' => 'title'),
-        PidTagHasAttachments        => array('field' => False),
+//        PidTagHasAttachments        => array('field' => False),
         PidLidBusyStatus            => array('field' => 'free_busy', 'parsingFunc' => 'parseBusy'),
         PidLidLocation              => array('field' => 'location'),
         PidLidAppointmentStartWhole => array('field' => 'start', 'parsingFunc' => 'parseDate'),
         PidLidAppointmentEndWhole   => array('field' => 'end', 'parsingFunc' => 'parseDate'),
-        PidNameKeywords             => array('field' => 'categories'), //ptypmultiplestring
+//        PidNameKeywords             => array('field' => 'categories'), //ptypmultiplestring
         PidLidAppointmentSubType    => array('field' => 'allday'),
         PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
-        PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
-        PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
+//        PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
+//        PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
         PidTagBody                  => array('field' => 'description', 'parsingFunc' => 'removeBrackets'),
         PidTagSensitivity           => array('field' => 'sensivity'),
         PidTagPriority              => array('field' => 'priority'),
@@ -53,6 +57,62 @@ class OCParsing
         return $ids[1];
     }
 
+    public static function createWithProperties($calendar, $properties)
+    {
+        return call_user_func_array(array($calendar, 'createMessage'), $properties);
+    }
+
+    public static function setProperties($fetchedEvent, $properties)
+    {
+        $setResult = call_user_func_array(array($fetchedEvent, 'set'), $properties);
+
+        return $setResult;
+    }
+
+    public static function parseRc2OcEvent($event)
+    {
+        $props = array();
+
+        foreach ($event as $field => $value) {
+            $ocProp = self::parseKeyRc2Oc($field);
+            if ($ocProp) {
+                $ocValue = self::parseValueRc2Oc($ocProp, $value);
+
+                if ($ocValue){
+                    $props = array_merge($props, array($ocProp, $ocValue));
+                }
+            }
+        }
+
+        return $props;
+    }
+
+    private static function parseKeyRc2Oc($rcField)
+    {
+        foreach (self::$eventTranslationTable as $ocProp => $rcProps) {
+            if ($rcField == $rcProps['field'])
+                return $ocProp;
+        }
+
+        return False;
+    }
+
+    private static function parseValueRc2Oc($ocProp, $value)
+    {
+        if (array_key_exists($ocProp, self::$eventTranslationTable)) {
+            $rcubeEventProps = self::$eventTranslationTable[$ocProp];
+            if (array_key_exists('parsingFunc', $rcubeEventProps)) {
+                $func = $rcubeEventProps['parsingFunc'] . "Rc2Oc";
+                $value = call_user_func_array(array(self, $func), array($value));
+            }
+
+            return $value;
+        }
+
+        return False;
+
+    }
+
     public static function parseEventOc2Rc($event)
     {
         $result = array();
@@ -65,6 +125,21 @@ class OCParsing
         }
 
         $result['end'] = self::correctAllDayEndDate($result);
+
+        return $result;
+    }
+
+    public static function getFullEventProps($calendar, $ocMessage)
+    {
+        $result = array();
+
+        $result = call_user_func_array(array($ocMessage, 'get'), self::$fullEventProperties);
+
+        $id = $ocMessage->getID();
+        $result['event_id'] = $id;
+        $result['uid'] = $id;
+        $result['id'] = $id;
+        $result['calendar'] = $calendar->getID();
 
         return $result;
     }
@@ -105,14 +180,34 @@ class OCParsing
         return new DateTime($date);
     }
 
+    private static function parseDateRc2Oc($date)
+    {
+        return $date->getTimestamp();
+    }
+
     private static function parseBusyOc2Rc($state)
     {
         return self::$busyTranslation[$state];
     }
 
+    private static function parseBusyRc2Oc($state)
+    {
+        foreach (self::$busyTranslation as $ocState => $rcState) {
+            if ($rcState == $state)
+                return $ocState;
+        }
+
+        return 0;
+    }
+
     private static function removeBracketsOc2Rc($description)
     {
         return ltrim($description, ')');
+    }
+
+    private static function removeBracketsRc2Oc($description)
+    {
+        return $description;
     }
 
     private static function correctAllDayEndDate($event)
