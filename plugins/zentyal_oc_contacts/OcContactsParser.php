@@ -84,19 +84,21 @@ class OcContactsParser
             PidTagOtherTelephoneNumber      => array('field' => 'phone:other', 'isArray' => True, 'subfield' => False),
 
             PidTagHomeAddressStreet             => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'street'),
-            PidTadLidWorkAddressStreet          => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'street'),
-            PidTagOtherAddressStreet            => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'street'),
             PidTagHomeAddressCity               => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'locality'),
-            PidLidWorkAddressCity               => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'locality'),
-            PidTagOtherAddressCity              => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'locality'),
             PidTagHomeAddressPostalCode         => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'zipcode'),
-            PidLidWorkAddressPostalCode         => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'zipcode'),
-            PidTagOtherAddressPostalCode        => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'zipcode'),
             PidTagHomeAddressStateOrProvince    => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'region'),
-            PidLidWorkAddressState              => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'region'),
-            PidTagOtherAddressStateOrProvince   => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'region'),
             PidTagHomeAddressCountry            => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'country'),
+
+            PidTadLidWorkAddressStreet          => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'street'),
+            PidLidWorkAddressCity               => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'locality'),
+            PidLidWorkAddressPostalCode         => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'zipcode'),
+            PidLidWorkAddressState              => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'region'),
             PidLidWorkAddressCountry            => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'country'),
+
+            PidTagOtherAddressStreet            => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'street'),
+            PidTagOtherAddressCity              => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'locality'),
+            PidTagOtherAddressPostalCode        => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'zipcode'),
+            PidTagOtherAddressStateOrProvince   => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'region'),
             PidTagOtherAddressCountry           => array('field' => 'address:other', 'isArray' => True, 'subfield' => 'country'),
 
             PidLidInstantMessagingAddress => array('field' => 'im:other', 'isArray' => True, 'subfield' => False),
@@ -287,6 +289,7 @@ class OcContactsParser
      */
     private static function parseNotesOc2Rc($ocContact, $notes)
     {
+        //$notes = $notes . "[" .  $ocContact->getBodyContentFormat() . "]";
         return ltrim($notes, ')');
     }
 }
