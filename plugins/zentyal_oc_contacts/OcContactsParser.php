@@ -164,7 +164,7 @@ class OcContactsParser
         return call_user_func_array(array($contacts, 'createMessage'), $properties);
     }
 
-    public static function oc2RcParseProps($properties)
+    public static function oc2RcParseProps($ocContact, $properties)
     {
         $contact = array();
 
@@ -183,6 +183,8 @@ class OcContactsParser
                 }
             }
         }
+
+        $contact['notes'] = self::parseNotesOc2Rc($ocContact, $contact['notes']);
 
         return $contact;
     }
@@ -278,6 +280,14 @@ class OcContactsParser
         }
 
         return 0;
+    }
+
+    /*  PidTagBody string returned sometimes has some addings at the
+     *  beginning or at the ending. We try to take them out of the field
+     */
+    private static function parseNotesOc2Rc($ocContact, $notes)
+    {
+        return ltrim($notes, ')');
     }
 }
 ?>

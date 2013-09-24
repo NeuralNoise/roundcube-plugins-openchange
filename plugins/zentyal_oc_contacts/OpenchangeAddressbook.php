@@ -77,29 +77,16 @@ class OpenchangeAddressbook extends rcube_addressbook
         /* TODO: Defensive code here */
         if ($this->oc_enabled) {
             $this->mapi = new MAPIProfileDB("/home/vagrant/.openchange/profiles.ldb");
-            $this->debug_msg( "1");
+            $this->debug_msg( "1: Path => " . $this->mapi->path() . " | ");
             $this->mapiProfile = $this->mapi->getProfile('test');
             $this->debug_msg( "2");
             $this->session = $this->mapiProfile->logon();
             $this->debug_msg( "3");
             $this->mailbox = $this->session->mailbox();
-            $this->debug_msg( "4");
+            $this->debug_msg( "4: Mailbox name => " . $this->mailbox->getName() . " | ");
             $this->ocContacts = $this->mailbox->contacts();
             $this->debug_msg( "5");
 
-/*            $contactsTable = call_user_func_array(
-                array($this->ocContacts, 'getMessageTable'),
-                OcContactsParser::$simpleContactProperties
-            );
-            $this->debug_msg( "6");
-            $this->contacts = array();
-            $messages = $contactsTable->summary();
-
-            foreach ($messages as $message) {
-                $record = OcContactsParser::simpleOcContact2Rc($message);
-                array_push($this->contacts, $record);
-            }
-*/
             $contactsTable =  $this->ocContacts->getMessageTable();
             $this->debug_msg( "6");
             $this->contacts = array();
@@ -288,12 +275,14 @@ class OpenchangeAddressbook extends rcube_addressbook
     {
         $contact = array();
 
-        $OcContact = $this->ocContacts->openMessage($id);
+        $ocContact = $this->ocContacts->openMessage($id);
 
         $propsToGet = OcContactsParser::$full_contact_properties;
-        $properties = OcContactsParser::getProperties($OcContact, $propsToGet);
-        $contact = OcContactsParser::oc2RcParseProps($properties);
+        $properties = OcContactsParser::getProperties($ocContact, $propsToGet);
+        $contact = OcContactsParser::oc2RcParseProps($ocContact, $properties);
         $contact['ID'] = $id;
+
+        $this->debug_msg("The full contact is: \n" . serialize($contact) . "\n");
 
         return $contact;
     }
