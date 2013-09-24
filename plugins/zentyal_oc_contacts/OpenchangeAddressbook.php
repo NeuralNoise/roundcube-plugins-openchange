@@ -302,13 +302,17 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         foreach ($save_cols as $col => $value) {
             $property = OcContactsParser::parseRc2OcProp($col, $value);
+            $this->debug_msg("Col: " . $col . " | Value: ");
+            if (is_array($value)) $this->debug_msg(serialize($value));
+            else $this->debug_msg($value);
+            $this->debug_msg(" | Prop: " . $property . "\n");
             $properties = array_merge($property, $properties);
 
         }
 
-        $OcContact = $this->ocContacts->openMessage($id, 1);
-        $setResult = OcContactsParser::setProperties($OcContact, $properties);
-        $OcContact->save();
+        $ocContact = $this->ocContacts->openMessage($id, 1);
+        $setResult = OcContactsParser::setProperties($ocContact, $properties);
+        $ocContact->save();
 
         $this->result = null;  // clear current result
 

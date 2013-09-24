@@ -33,7 +33,7 @@ class OcContactsParser
         PidTagHomeTelephoneNumber,PidTagHome2TelephoneNumber,
         PidTagMobileTelephoneNumber,PidTagCarTelephoneNumber,
         PidTagAssistantTelephoneNumber,PidTagOtherTelephoneNumber,
-        PidTagHomeAddressStreet,PidLidWorkAddressStreet,PidTagOtherAddressStreet,
+        PidTagHomeAddressStreet,PidLidWorkAddressStreet, PidTagOtherAddressStreet,
         PidTagHomeAddressCity,PidLidWorkAddressCity,PidTagOtherAddressCity,
         PidTagHomeAddressPostalCode,PidLidWorkAddressPostalCode,
         PidTagOtherAddressPostalCode,PidTagHomeAddressStateOrProvince,
@@ -89,7 +89,7 @@ class OcContactsParser
             PidTagHomeAddressStateOrProvince    => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'region'),
             PidTagHomeAddressCountry            => array('field' => 'address:home', 'isArray' => True, 'subfield' => 'country'),
 
-            PidTadLidWorkAddressStreet          => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'street'),
+            PidLidWorkAddressStreet             => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'street'),
             PidLidWorkAddressCity               => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'locality'),
             PidLidWorkAddressPostalCode         => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'zipcode'),
             PidLidWorkAddressState              => array('field' => 'address:work', 'isArray' => True, 'subfield' => 'region'),
