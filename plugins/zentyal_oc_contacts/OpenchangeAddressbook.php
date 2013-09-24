@@ -41,7 +41,8 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public $coltypes = array('name', 'firstname', 'surname', 'middlename', 'prefix', 'suffix', 'nickname',
             'jobtitle', 'organization', 'department', 'email', 'phone', 'address',
-            'birthday', 'website', 'im', 'notes', 'photo');
+            //'birthday',
+            'website', 'im:other', 'notes', 'photo');
 
     /**
      * Default destructor
