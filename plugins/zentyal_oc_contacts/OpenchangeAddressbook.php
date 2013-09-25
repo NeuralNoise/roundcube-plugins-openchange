@@ -59,7 +59,7 @@ class OpenchangeAddressbook extends rcube_addressbook
         fclose($this->handle);
     }
 
-    public function __construct($id)
+    public function __construct($id, $pathDB, $username)
     {
         $this->ready = true;
         $this->name = "Contacts";
@@ -71,26 +71,25 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         $this->handle = fopen($this->file, 'a');
         $this->debug_msg( "\nStarting the constructor\n");
+        $this->debug_msg("ID: " . $id . " | Path: " . $pathDB . " | profileName: " . $username . "\n");
 
         //Creating the OC binding
         /* TODO: Defensive code here */
-        if ($this->oc_enabled) {
-            $this->mapi = new MAPIProfileDB("/home/vagrant/.openchange/profiles.ldb");
-            $this->debug_msg( "1: Path => " . $this->mapi->path() . " | ");
-            $this->mapiProfile = $this->mapi->getProfile('test');
-            $this->debug_msg( "2");
-            $this->session = $this->mapiProfile->logon();
-            $this->debug_msg( "3");
-            $this->mailbox = $this->session->mailbox();
-            $this->debug_msg( "4: Mailbox name => " . $this->mailbox->getName() . " | ");
-            $this->ocContacts = $this->mailbox->contacts();
-            $this->debug_msg( "5");
+        $this->mapi = new MAPIProfileDB($pathDB);
+        $this->debug_msg( "1: Path => " . $this->mapi->path() . " | ");
+        $this->mapiProfile = $this->mapi->getProfile($username);
+        $this->debug_msg( "2: Name => " . $username . " | ");
+        $this->session = $this->mapiProfile->logon();
+        $this->debug_msg( "3");
+        $this->mailbox = $this->session->mailbox();
+        $this->debug_msg( "4: Mailbox name => " . $this->mailbox->getName() . " | ");
+        $this->ocContacts = $this->mailbox->contacts();
+        $this->debug_msg( "5");
 
-            $this->debug_msg( "6");
-            $this->contacts = array();
-            $this->fetchOcContacts();
-            $this->debug_msg( "7");
-        }
+        $this->debug_msg( "6");
+        $this->contacts = array();
+        $this->fetchOcContacts();
+        $this->debug_msg( "7");
     }
 
     private function fetchOcContacts()
