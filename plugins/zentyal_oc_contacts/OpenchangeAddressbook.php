@@ -9,10 +9,9 @@ class OpenchangeAddressbook extends rcube_addressbook
     /** public properties (mandatory) */
     public $primary_key = 'id';
     public $groups = false;
-    public $readonly = true;
+    public $readonly = false;
     public $searchonly = false;
-    public $undelete = false;
-    public $ready = false;
+    public $ready = true;
     public $group_id = 0;
     public $list_page = 1;
     public $page_size = 10;
@@ -41,8 +40,7 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public $coltypes = array('name', 'firstname', 'surname', 'middlename', 'prefix', 'suffix', 'nickname',
             'jobtitle', 'organization', 'department', 'email', 'phone', 'address',
-            //'birthday',
-            'website', 'im:other', 'notes', 'photo');
+            'website', 'im', 'notes', 'photo');
 
     /**
      * Default destructor
@@ -349,6 +347,20 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         return $createResult ? $createResult : $False;
 
+    }
+
+    /**
+     * Mark one or more contact records as deleted
+     *
+     * @param array   Record identifiers
+     * @param boolean Remove record(s) irreversible (unsupported)
+     */
+    function delete($ids, $force=true)
+    {
+        $this->debug_msg( "\nDeleting contacts\n");
+        OcContactsParser::deleteContacts($this->ocContacts, $ids);
+
+        return true;
     }
 
     function create_group($name)

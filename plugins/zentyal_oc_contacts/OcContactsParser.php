@@ -166,6 +166,14 @@ class OcContactsParser
         return call_user_func_array(array($contacts, 'createMessage'), $properties);
     }
 
+    public static function deleteContacts($ocContacts, $ids)
+    {
+        if (!is_array($ids))
+            $ids = array($ids);
+
+        return call_user_func_array(array($ocContacts, 'deleteMessages'), $ids);
+    }
+
     public static function oc2RcParseProps($ocContact, $properties)
     {
         $contact = array();
@@ -216,7 +224,6 @@ class OcContactsParser
         }
 
         return $property;
-
     }
 
     public static function parseRc2OcKey($rcubeField, $subfield=False)

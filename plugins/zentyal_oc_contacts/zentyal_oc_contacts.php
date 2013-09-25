@@ -52,7 +52,7 @@
             $args['sources']['test'] = array(
                     'id' => 'test',
                     'name' => 'Testing AB',
-                    'readonly' => true,
+                    'readonly' => false,
             );
 
             return $args;
