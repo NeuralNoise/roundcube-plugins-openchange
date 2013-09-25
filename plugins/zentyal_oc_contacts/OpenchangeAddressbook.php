@@ -86,20 +86,26 @@ class OpenchangeAddressbook extends rcube_addressbook
             $this->ocContacts = $this->mailbox->contacts();
             $this->debug_msg( "5");
 
-            $contactsTable =  $this->ocContacts->getMessageTable();
             $this->debug_msg( "6");
             $this->contacts = array();
-            $messages = $contactsTable->getMessages();
-            foreach ($messages as $message) {
-                $record = array();
-                $record['email'] = $message->get(PidLidEmail1EmailAddress);
-                $record['id'] = $message->getID();
-                $record['cardName'] = $message->get(PidLidFileUnder);
-
-                array_push($this->contacts, $record);
-            }
+            $this->fetchOcContacts();
             $this->debug_msg( "7");
         }
+    }
+
+    private function fetchOcContacts()
+    {
+        $contactsTable =  $this->ocContacts->getMessageTable();
+        $messages = $contactsTable->getMessages();
+        foreach ($messages as $message) {
+            $record = array();
+            $record['email'] = $message->get(PidLidEmail1EmailAddress);
+            $record['id'] = $message->getID();
+            $record['cardName'] = $message->get(PidLidFileUnder);
+
+            array_push($this->contacts, $record);
+        }
+        $this->debug_msg(" - The number of fetched contacts is: " . count($this->contacts) . " - ");
     }
 
     private function debug_msg($string)
@@ -211,8 +217,14 @@ class OpenchangeAddressbook extends rcube_addressbook
     {
         $this->debug_msg( "\nStarting search\n");
 
-        /* Compose from Contacts screen */
-        if ($fields == $this->primary_key) {
+        /* Compose from Contacts screen  or after contact creation*/
+        if ($fields == $this->primary_key || $fields == 'test') {
+            if (!is_array($value))
+                $value = array($value);
+
+            /* TODO Improve this, a whole search for having the new contact */
+            $this->contacts = array();
+            $this->fetchOcContacts();
             $this->result = new rcube_result_set(count($value));
 
             foreach ($value as $id) {
@@ -223,8 +235,6 @@ class OpenchangeAddressbook extends rcube_addressbook
                     }
                 }
             }
-
-            return $this->result;
         }
 
         return $this->result;
@@ -342,10 +352,11 @@ class OpenchangeAddressbook extends rcube_addressbook
             $this->debug_msg(ob_get_clean());
         }
 
-        $createResult = OcContactsParser::createWithProperties($this->ocContacts, $properties);
-        $this->debug_msg( "\nEnding insert id = " . $createResult . "\n");
+        $contact = OcContactsParser::createWithProperties($this->ocContacts, $properties);
+        $id = $contact->getID();
+        $this->debug_msg( "\nEnding insert id = " . $id. "\n");
 
-        return $createResult ? $createResult : $False;
+        return $id ? $id: $False;
 
     }
 
