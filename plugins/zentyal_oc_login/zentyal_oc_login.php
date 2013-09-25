@@ -23,6 +23,7 @@ class zentyal_oc_login extends rcube_plugin
     {
         $this->handle = fopen($this->file, 'a');
         $this->rc = rcmail::get_instance();
+        $this->load_config();
 
         /* we use login after instead the authenticate hook, because, for the
          * "first login check" we will use IMAP instead of ADirectory
@@ -32,6 +33,7 @@ class zentyal_oc_login extends rcube_plugin
         //to perform a logout it's only needed a GET request to /?_task=logout
     }
 
+    /* Deprecated */
     function authenticate($args)
     {
         $this->debug_msg("Starting the authenticate function\n");
@@ -64,13 +66,27 @@ class zentyal_oc_login extends rcube_plugin
     function checkMapiProfile($args)
     {
         $this->debug_msg("Starting the checkMapiProfile function\n");
-        ob_start(); var_dump($args);
-        $this->debug_msg("The arguments are: \n" . ob_get_clean() . "\n");
 
-        $rcube_user = $this->rc->user;
+
         $username = get_input_value('_user', RCUBE_INPUT_POST);
         $password = get_input_value('_pass', RCUBE_INPUT_POST);
 
+        $profileName = $username;
+        $pathDB = $this->rc->config->get('ocLogin_DB_path', "/etc/openchange/profiles/profiles.ldb");
+
+        $server = $this->rc->config->get('ocLogin_server', 'localhost');
+
+        $domain = $this->rc->config->get('ocLogin_domain', "example");
+        $realm = $this->rc->config->get('ocLogin_realm', 'example.com');
+
+        $this->debug_msg("PN: " . $profileName . " | UN: " . $username . " | PW: " . $password);
+        $this->debug_msg(" | DM: " . $domain. " | RL: " . $realm. " | SV: " . $server . "\n");
+
+        $mapiDB = new MAPIProfileDB($pathDB);
+        $profile = $mapiDB->createAndGetProfile($profileName, $username, $password, $domain, $realm, $server);
+
+        // As we can set $args['task'] and $args['action'] (and other URL params) we can redirect here to
+        // wherever we want
         return $args;
     }
 
