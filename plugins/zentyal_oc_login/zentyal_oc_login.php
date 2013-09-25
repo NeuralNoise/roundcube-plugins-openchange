@@ -67,23 +67,26 @@ class zentyal_oc_login extends rcube_plugin
     {
         $this->debug_msg("Starting the checkMapiProfile function\n");
 
+        $emailParts = explode('@', get_input_value('_user', RCUBE_INPUT_POST), 2);
 
-        $username = get_input_value('_user', RCUBE_INPUT_POST);
+        $username = $emailParts[0];
+        $realm = $emailParts[1];
         $password = get_input_value('_pass', RCUBE_INPUT_POST);
 
-        $profileName = $username;
+        $profileName = get_input_value('_user', RCUBE_INPUT_POST);
         $pathDB = $this->rc->config->get('ocLogin_DB_path', "/etc/openchange/profiles/profiles.ldb");
 
         $server = $this->rc->config->get('ocLogin_server', 'localhost');
 
         $domain = $this->rc->config->get('ocLogin_domain', "example");
-        $realm = $this->rc->config->get('ocLogin_realm', 'example.com');
-
-        $this->debug_msg("PN: " . $profileName . " | UN: " . $username . " | PW: " . $password);
-        $this->debug_msg(" | DM: " . $domain. " | RL: " . $realm. " | SV: " . $server . "\n");
 
         $mapiDB = new MAPIProfileDB($pathDB);
         $profile = $mapiDB->createAndGetProfile($profileName, $username, $password, $domain, $realm, $server);
+
+        if (!$profile) {
+            $args['_task'] = "logout";
+            $this->debug_msg("Something went wrong. Redirecting to logout task.\n");
+        }
 
         // As we can set $args['task'] and $args['action'] (and other URL params) we can redirect here to
         // wherever we want
