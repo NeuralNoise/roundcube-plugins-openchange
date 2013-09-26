@@ -27,7 +27,7 @@ class OCParsing
         PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
 //        PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
 //        PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
-        PidTagBody                  => array('field' => 'description', 'parsingFunc' => 'removeBrackets'),
+        PidTagBody                  => array('field' => 'description', 'parsingFunc' => 'parseDescription'),
         PidTagSensitivity           => array('field' => 'sensivity'),
         PidTagPriority              => array('field' => 'priority'),
     );
@@ -211,15 +211,19 @@ class OCParsing
         return 0;
     }
 
-    private static function removeBracketsOc2Rc($description)
+    private static function parseDescriptionOc2Rc($description)
     {
         $description = ltrim($description, ')');
-        $exploded = explode("\r\n\n", $description, -1);
 
-        return join($exploded, "\n");
+        if (strpos($description, "\r\n\n") !== false) {
+            $exploded = explode("\r\n\n", $description, -1);
+            $description = join($exploded, "\n");
+        }
+
+        return $description;
     }
 
-    private static function removeBracketsRc2Oc($description)
+    private static function parseDescriptionRc2Oc($description)
     {
         return $description;
     }
