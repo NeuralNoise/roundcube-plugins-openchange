@@ -69,6 +69,14 @@ class OCParsing
         return $setResult;
     }
 
+    public static function deleteEvents($calendar, $eventsIds)
+    {
+        if (!is_array($eventsIds))
+            $eventsIds = array($eventsIds);
+
+        return call_user_func_array(array($calendar, 'deleteMessages'), $eventsIds);
+    }
+
     public static function parseRc2OcEvent($event)
     {
         $props = array();

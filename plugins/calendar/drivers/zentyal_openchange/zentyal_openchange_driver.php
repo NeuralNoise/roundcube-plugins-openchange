@@ -667,70 +667,11 @@ class zentyal_openchange_driver extends calendar_driver
         $this->debug_msg(ob_get_clean() . "\n");
         if (!empty($this->calendars)) {
             $event += (array)$this->get_event($event);
-            $master = $event;
-            $update_master = false;
-            $savemode = 'all';
 
-            // read master if deleting a recurring event
-            if ($event['recurrence'] || $event['recurrence_id']) {
-                $master = $event['recurrence_id'] ? $this->get_event(array('id' => $event['recurrence_id'])) : $event;
-                $savemode = $event['_savemode'];
-            }
+            //At event["calendar"] there is the ID of the calendar, use?
+            $deletingResult = OCParsing::deleteEvents($this->ocCalendar, $event['id']);
 
-            switch ($savemode) {
-                case 'current':
-                    // add exception to master event
-                    $master['recurrence']['EXDATE'][] = $event['start'];
-                    $update_master = true;
-
-                    // just delete this single occurence
-                    $query = $this->rc->db->query(
-                            "DELETE FROM " . $this->db_events . "
-                            WHERE calendar_id IN (" . $this->calendar_ids . ")
-                            AND event_id=?",
-                            $event['id']
-                            );
-                    break;
-
-                case 'future':
-                    if ($master['id'] != $event['id']) {
-                        // set until-date on master event
-                        $master['recurrence']['UNTIL'] = clone $event['start'];
-                        $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
-                        unset($master['recurrence']['COUNT']);
-                        $update_master = true;
-
-                        // delete this and all future instances
-                        $fromdate = clone $event['start'];
-                        $fromdate->setTimezone($this->server_timezone);
-                        $query = $this->rc->db->query(
-                                "DELETE FROM " . $this->db_events . "
-                                WHERE calendar_id IN (" . $this->calendar_ids . ")
-                                AND " . $this->rc->db->quote_identifier('start') . " >= ?
-                                AND recurrence_id=?",
-                                $fromdate->format(self::DB_DATE_FORMAT),
-                                $master['id']
-                                );
-                        break;
-                    }
-                    // else: future == all if modifying the master event
-
-                default:  // 'all' is default
-                    $query = $this->rc->db->query(
-                            "DELETE FROM " . $this->db_events . "
-                            WHERE (event_id=? OR recurrence_id=?)
-                            AND calendar_id IN (" . $this->calendar_ids . ")",
-                            $master['id'],
-                            $master['id']
-                            );
-                    break;
-            }
-
-            $success = $this->rc->db->affected_rows($query);
-            if ($success && $update_master)
-                $this->_update_event($master, true);
-
-            return $success;
+            return true;
         }
 
         return false;
@@ -752,12 +693,13 @@ class zentyal_openchange_driver extends calendar_driver
         $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
         $col = is_array($event) && is_numeric($id) ? 'event_id' : 'uid';
 
-        $message = $this->ocCalendar->openMessage('0x' . $id);
+        $message = $this->ocCalendar->openMessage($id);
 
         $event = OCParsing::getFullEventProps($this->ocCalendar, $message);
         $event = OCParsing::parseEventOc2Rc($event);
 
         $this->debug_msg("The event we build is:\n" . serialize($event) . "\n");
+        $this->debug_msg("\nEnding get_event\n");
 
         return $event;
     }
