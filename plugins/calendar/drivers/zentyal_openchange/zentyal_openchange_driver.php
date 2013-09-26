@@ -83,32 +83,19 @@ class zentyal_openchange_driver extends calendar_driver
     /**
      * Default constructor
      */
-    public function __construct($cal, $pathDB, $username)
+    public function __construct($cal, $pathDB, $profileName)
     {
         $this->handle = fopen($this->file, 'a');
         $this->debug_msg("\nError => Starting the contructor\n");
 
         //Creating the OC binding
         /* TODO: Defensive code here */
-        if ($this->oc_enabled) {
-            $this->mapi = new MAPIProfileDB($pathDB);
-            $this->mapiProfile = $this->mapi->getProfile($username);
-            $this->session = $this->mapiProfile->logon();
-            $this->mailbox = $this->session->mailbox();
-            $this->ocCalendar = $this->mailbox->calendar();
-
-            $table = $this->ocCalendar->getMessageTable();
-            $messages = $table->getMessages();
-
-            foreach ($messages as $message) {
-                $record = OCParsing::getFullEventProps($this->ocCalendar, $message);
-                array_push($this->events, $record);
-//                $this->debug_msg(serialize($record) . "\n");
-            }
-
-            unset($messages);
-            unset($table);
-        }
+        $this->debug_msg("Profile path: " . $pathDB . " | profile name: " . $profileName . "\n");
+        $this->mapi = new MAPIProfileDB($pathDB);
+        $this->mapiProfile = $this->mapi->getProfile($profileName);
+        $this->session = $this->mapiProfile->logon();
+        $this->mailbox = $this->session->mailbox();
+        $this->ocCalendar = $this->mailbox->calendar();
 
         $this->cal = $cal;
         $this->rc = $cal->rc;
@@ -121,6 +108,24 @@ class zentyal_openchange_driver extends calendar_driver
         $this->db_colors= $this->rc->config->get('db_table_colors', 'colors');
 
         $this->_read_calendars();
+    }
+
+    private function fetchEvents()
+    {
+        $this->debug_msg("\nStarting FetchEvents\n");
+        $table = $this->ocCalendar->getMessageTable();
+        $messages = $table->getMessages();
+
+        $this->debug_msg("The number of events in the table is: " . count($messages) . "\n");
+
+        foreach ($messages as $message) {
+            $record = OCParsing::getFullEventProps($this->ocCalendar, $message);
+            array_push($this->events, $record);
+            $this->debug_msg(serialize($record) . "\n");
+        }
+
+        unset($messages);
+        unset($table);
     }
 
     private function debug_msg($message)
@@ -765,6 +770,9 @@ class zentyal_openchange_driver extends calendar_driver
     public function load_events($start, $end, $query = null, $calendars = null)
     {
         $this->debug_msg("\nStarting load_events\n");
+
+        $this->fetchEvents();
+
         $events = array();
 
         foreach ($this->events as $event) {
