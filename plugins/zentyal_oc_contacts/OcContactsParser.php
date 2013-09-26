@@ -299,7 +299,7 @@ class OcContactsParser
         $notes = ltrim($notes, ')');
         $exploded = explode("\r\n\n", $notes, -1);
 
-        return $exploded[0];
+        return join($exploded, "\n");
     }
 }
 ?>
