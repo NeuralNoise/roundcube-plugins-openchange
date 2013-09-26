@@ -2,7 +2,7 @@
 class OCParsing
 {
     public static $fullEventProperties = array(
-        PidTagOriginalSubject,
+        PidTagNormalizedSubject,
         //PidTagHasAttachments,
         PidLidBusyStatus, PidLidLocation,
         PidLidAppointmentStartWhole, PidLidAppointmentEndWhole,
@@ -16,7 +16,7 @@ class OCParsing
     //TODO: Qué hacer con PidLidCommoni{Start/End} & PidTag{Start/End}Date
     public static $eventTranslationTable = array(
         //PidLidResponseStatus,PidLidRecurring
-        PidTagOriginalSubject       => array('field' => 'title'),
+        PidTagNormalizedSubject     => array('field' => 'title'),
 //        PidTagHasAttachments        => array('field' => False),
         PidLidBusyStatus            => array('field' => 'free_busy', 'parsingFunc' => 'parseBusy'),
         PidLidLocation              => array('field' => 'location'),
