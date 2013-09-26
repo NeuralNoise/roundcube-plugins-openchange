@@ -121,7 +121,8 @@ class zentyal_openchange_driver extends calendar_driver
         foreach ($messages as $message) {
             $record = OCParsing::getFullEventProps($this->ocCalendar, $message);
             array_push($this->events, $record);
-            $this->debug_msg(serialize($record) . "\n");
+            $this->debug_msg("\nShowing a event:\n");
+            $this->debug_msg(serialize($record) . "\n\n");
         }
 
         unset($messages);
@@ -411,10 +412,15 @@ class zentyal_openchange_driver extends calendar_driver
 
             $properties = OCParsing::parseRc2OcEvent($event);
 
-            $this->debug_msg("The properties we get:\n");
+            $this->debug_msg("The properties we set:\n");
             ob_start(); var_dump($properties);
             $this->debug_msg(ob_get_clean());
-            $event_id = OCParsing::createWithProperties($this->ocCalendar, $properties);
+            $newEevent = OCParsing::createWithProperties($this->ocCalendar, $properties);
+
+            $event_id = $newEevent->getID();
+            unset($newEevent);
+
+            $this->debug_msg("The id returned is: " . $event_id . "\n");
 
             return $event_id;
         }
@@ -439,7 +445,7 @@ class zentyal_openchange_driver extends calendar_driver
             $properties = OCParsing::parseRc2OcEvent($event);
             $ocEvent = $this->ocCalendar->openMessage($old['id'], 1);
             $setResult = OcContactsParser::setProperties($ocEvent, $properties);
-            $ocContact->save();
+            $ocEvent->save();
 
             return True;
         }
@@ -724,7 +730,6 @@ class zentyal_openchange_driver extends calendar_driver
 
         foreach ($events as $event) {
             $this->debug_msg("\nThe event id is: " . $event['id'] . "\n");
-            $this->debug_msg(serialize($event) . "\n");
         }
         $this->debug_msg("Ending load_events\n");
 
