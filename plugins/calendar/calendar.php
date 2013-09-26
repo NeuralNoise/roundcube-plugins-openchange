@@ -47,6 +47,9 @@ class calendar extends rcube_plugin
   public $ical;
   public $ui;
 
+  private $pathDB;
+  private $username;
+
   public $defaults = array(
     'calendar_default_view' => "agendaWeek",
     'calendar_timeslots'    => 2,
@@ -76,6 +79,10 @@ class calendar extends rcube_plugin
 
     // load calendar configuration
     $this->load_config();
+
+    // load the Mapi Profile variables
+    $this->pathDB = $this->rc->config->get('ocLogin_DB_path', "/etc/openchange/profiles/profiles.ldb");
+    $this->username = $_SESSION['username'];
 
     // load localizations
     $this->add_texts('localization/', $this->rc->task == 'calendar' && (!$this->rc->action || $this->rc->action == 'print'));
@@ -178,7 +185,8 @@ class calendar extends rcube_plugin
     if (is_object($this->driver))
       return;
 
-    $driver_name = $this->rc->config->get('calendar_driver', 'database');
+    $driver_name = $this->rc->config->get('calendar_driver', 'zentyal_openchange');
+    //$driver_name = $this->rc->config->get('calendar_driver', 'database');
     $driver_class = $driver_name . '_driver';
 
     require_once($this->home . '/drivers/calendar_driver.php');
@@ -188,7 +196,7 @@ class calendar extends rcube_plugin
       case "kolab":
         $this->require_plugin('libkolab');
       default:
-        $this->driver = new $driver_class($this);
+        $this->driver = new $driver_class($this, $this->pathDB, $this->username);
         break;
      }
 

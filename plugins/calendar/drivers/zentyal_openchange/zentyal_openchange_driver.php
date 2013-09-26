@@ -83,7 +83,7 @@ class zentyal_openchange_driver extends calendar_driver
     /**
      * Default constructor
      */
-    public function __construct($cal)
+    public function __construct($cal, $pathDB, $username)
     {
         $this->handle = fopen($this->file, 'a');
         $this->debug_msg("\nError => Starting the contructor\n");
@@ -91,8 +91,8 @@ class zentyal_openchange_driver extends calendar_driver
         //Creating the OC binding
         /* TODO: Defensive code here */
         if ($this->oc_enabled) {
-            $this->mapi = new MAPIProfileDB("/home/vagrant/.openchange/profiles.ldb");
-            $this->mapiProfile = $this->mapi->getProfile('test');
+            $this->mapi = new MAPIProfileDB($pathDB);
+            $this->mapiProfile = $this->mapi->getProfile($username);
             $this->session = $this->mapiProfile->logon();
             $this->mailbox = $this->session->mailbox();
             $this->ocCalendar = $this->mailbox->calendar();
