@@ -60,7 +60,7 @@ class zentyal_openchange_driver extends calendar_driver
     private $mapi;
 
     private $events = array();
-
+    private $createdEventId = false;
 
     /**
      * Default destructor
@@ -420,6 +420,7 @@ class zentyal_openchange_driver extends calendar_driver
             $event_id = $newEevent->getID();
             unset($newEevent);
 
+            $this->createdEventId = $event_id;
             $this->debug_msg("The id returned is: " . $event_id . "\n");
 
             return $event_id;
@@ -696,8 +697,11 @@ class zentyal_openchange_driver extends calendar_driver
         $this->debug_msg("\nStarting get_event\n");
         $this->debug_msg("The event we get is:\n" . serialize($event) . "\n");
 
-        $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
-        $col = is_array($event) && is_numeric($id) ? 'event_id' : 'uid';
+        if ($this->createdEventId){
+            $id = $this->createdEventId;
+            $this->createdEventId = false;
+        } else
+            $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
 
         $message = $this->ocCalendar->openMessage($id);
 
