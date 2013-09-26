@@ -58,6 +58,7 @@ class zentyal_openchange_driver extends calendar_driver
     private $session;
     private $mapiProfile;
     private $mapi;
+    private $username;
 
     private $events = array();
     private $createdEventId = false;
@@ -91,6 +92,8 @@ class zentyal_openchange_driver extends calendar_driver
         //Creating the OC binding
         /* TODO: Defensive code here */
         $this->debug_msg("Profile path: " . $pathDB . " | profile name: " . $profileName . "\n");
+
+        $this->username = $profileName;
         $this->mapi = new MAPIProfileDB($pathDB);
         $this->mapiProfile = $this->mapi->getProfile($profileName);
         $this->session = $this->mapiProfile->logon();
@@ -727,13 +730,22 @@ class zentyal_openchange_driver extends calendar_driver
 
         $events = array();
 
+        $attendees = array(array(
+            'name' => "",
+            'status' => "ACCEPTED",
+            'role' => "ORGANIZER",
+            'email' => $this->username,
+        ));
+
         foreach ($this->events as $event) {
             $tempEvent = OCParsing::parseEventOc2Rc($event);
+            $tempEvent['attendees'] = $attendees;
             array_push($events, $tempEvent);
         }
 
         foreach ($events as $event) {
             $this->debug_msg("\nThe event id is: " . $event['id'] . "\n");
+            $this->debug_msg(serialize($event) . "\n");
         }
         $this->debug_msg("Ending load_events\n");
 
