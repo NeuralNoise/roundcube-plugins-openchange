@@ -190,7 +190,11 @@ class OCParsing
 
     private static function parseDateRc2Oc($date)
     {
-        return $date->getTimestamp();
+        // Return the Windows timestamp of $date
+        // Windows timestamp is the secods since the 1/1/1601
+        // getTimestamp returns the Unix timestamp (since 1/1/1970)
+        // 194074560 are the seconds between those dates
+        return $date->getTimestamp() + 194074560;
     }
 
     private static function parseBusyOc2Rc($state)
