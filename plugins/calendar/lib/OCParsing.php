@@ -210,7 +210,10 @@ class OCParsing
 
     private static function removeBracketsOc2Rc($description)
     {
-        return ltrim($description, ')');
+        $description = ltrim($description, ')');
+        $exploded = explode("\r\n\n", $description, -1);
+
+        return $exploded[0];
     }
 
     private static function removeBracketsRc2Oc($description)

@@ -296,8 +296,10 @@ class OcContactsParser
      */
     private static function parseNotesOc2Rc($ocContact, $notes)
     {
-        //$notes = $notes . "[" .  $ocContact->getBodyContentFormat() . "]";
-        return ltrim($notes, ')');
+        $notes = ltrim($notes, ')');
+        $exploded = explode("\r\n\n", $notes, -1);
+
+        return $exploded[0];
     }
 }
 ?>
