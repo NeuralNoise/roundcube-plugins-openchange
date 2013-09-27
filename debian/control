@@ -1,4 +1,4 @@
-Source: roundcube
+Source: roundcube-plugins-openchange
 Section: web
 Priority: extra
 Maintainer: Zentyal Packaging Maintainers <pkg-team@zentyal.com>
