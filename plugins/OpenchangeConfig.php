@@ -1,8 +1,7 @@
 <?php
 class OpenchangeConfig
 {
-    //FIXME!
-    public static $profileLocation = "/tmp/profiles.ldb";
+    public static $profileLocation = "/etc/roundcube/profiles/profiles.ldb";
 
     public static $logLocation = "/var/log/roundcube/roundcube-openchange";
     public static $debugEnabled = false;
