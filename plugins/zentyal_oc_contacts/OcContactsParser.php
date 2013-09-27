@@ -297,9 +297,14 @@ class OcContactsParser
     private static function parseNotesOc2Rc($ocContact, $notes)
     {
         $notes = ltrim($notes, ')');
-        $exploded = explode("\r\n\n", $notes, -1);
 
-        return join($exploded, "\n");
+        if (strpos($notes, "\r\n\n") !== false) {
+            $exploded = explode("\r\n\n", $notes, -1);
+            $notes = join($exploded, "\n");
+        }
+
+        return $notes;
+
     }
 
     public static function parsePhotoOc2Rc($ocContact)
