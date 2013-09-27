@@ -23,7 +23,7 @@ class OCParsing
         PidLidAppointmentStartWhole => array('field' => 'start', 'parsingFunc' => 'parseDate'),
         PidLidAppointmentEndWhole   => array('field' => 'end', 'parsingFunc' => 'parseDate'),
 //        PidNameKeywords             => array('field' => 'categories'), //ptypmultiplestring
-        PidLidAppointmentSubType    => array('field' => 'allday'),
+        PidLidAppointmentSubType    => array('field' => 'allday', 'parsingFunc' => 'parseBool'),
         PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
 //        PidLidAllAttendeesString    => array('field' => 'attendees'), //this will need some parsing
 //        PidLidAppointmentRecur      => array('field' => 'recurrence'), //binary, parsing needed, PidLidRecurrenceType, PidLidRecurrencePattern
@@ -86,7 +86,7 @@ class OCParsing
             if ($ocProp) {
                 $ocValue = self::parseValueRc2Oc($ocProp, $value);
 
-                if ($ocValue){
+                if (is_bool($ocValue) || $ocValue){
                     $props = array_merge($props, array($ocProp, $ocValue));
                 }
             }
@@ -235,6 +235,35 @@ class OCParsing
         }
 
         return $event['end'];
+    }
+
+    private static function parseBoolOc2Rc($string)
+    {
+        if ($string == "0")
+            return false;
+        else
+            return true;
+    }
+
+    private static function parseBoolRc2Oc($bool)
+    {
+        if ($bool)
+            return true;
+        else
+            return false;
+    }
+
+    public static function checkAllDayConsistency($event)
+    {
+         if ($event['allday']){
+            $hourEnd = intval($event['end']->format('H'));
+            $hourStart = intval($event['start']->format('H'));
+            $hourDiff = $hourEnd - $hourStart;
+
+            $event['end']->sub(date_interval_create_from_date_string($hourDiff . ' hour'));
+         }
+
+         return $event;
     }
 }
 ?>

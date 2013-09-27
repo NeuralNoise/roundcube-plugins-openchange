@@ -446,6 +446,7 @@ class zentyal_openchange_driver extends calendar_driver
             $update_recurring = true;
             $old = $this->get_event($event);
 
+            $event = OCParsing::checkAllDayConsistency($event);
             $properties = OCParsing::parseRc2OcEvent($event);
             $ocEvent = $this->ocCalendar->openMessage($old['id'], 1);
             $setResult = OcContactsParser::setProperties($ocEvent, $properties);
@@ -698,7 +699,6 @@ class zentyal_openchange_driver extends calendar_driver
     public function get_event($event, $writeable = false, $active = false, $personal = false)
     {
         $this->debug_msg("\nStarting get_event\n");
-        $this->debug_msg("The event we get is:\n" . serialize($event) . "\n");
 
         if ($this->createdEventId){
             $id = $this->createdEventId;
@@ -711,7 +711,6 @@ class zentyal_openchange_driver extends calendar_driver
         $event = OCParsing::getFullEventProps($this->ocCalendar, $message);
         $event = OCParsing::parseEventOc2Rc($event);
 
-        $this->debug_msg("The event we build is:\n" . serialize($event) . "\n");
         $this->debug_msg("\nEnding get_event\n");
 
         return $event;
