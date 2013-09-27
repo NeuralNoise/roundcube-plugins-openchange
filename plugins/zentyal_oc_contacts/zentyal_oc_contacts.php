@@ -52,7 +52,7 @@
             $args['sources']['test'] = array(
                     'id' => 'test',
                     'name' => 'Testing AB',
-                    'readonly' => true,
+                    'readonly' => false,
             );
 
             return $args;
@@ -79,12 +79,9 @@
 
         function get_address_book($args)
         {
-$file = '/var/log/roundcube/my_debug.txt';
-$handle = fopen($file, 'a');
-fwrite($handle, "\nStarting => Getting an address book\n");
-fclose($handle);
+            $username = $_SESSION['username'];
 
-            $args['instance'] = new OpenchangeAddressbook($args['id']);
+            $args['instance'] = new OpenchangeAddressbook($args['id'], $username);
 
             return $args;
         }

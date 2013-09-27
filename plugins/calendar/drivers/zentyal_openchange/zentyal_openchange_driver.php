@@ -22,14 +22,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+require_once(dirname(__FILE__) . '/../../../OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../../lib/OCParsing.php');
 
 class zentyal_openchange_driver extends calendar_driver
 {
     const DB_DATE_FORMAT = 'Y-m-d H:i:s';
+    //$event['start']->format(self::DB_DATE_FORMAT),
 
     // features this backend supports
-    public $alarms = true;
-    public $attendees = true;
+    public $alarms = false;
+    public $attendees = false;
     public $freebusy = true;
     public $attachments = false;
     public $alarm_types = array('DISPLAY');
@@ -43,30 +46,54 @@ class zentyal_openchange_driver extends calendar_driver
     private $sensitivity_map = array('public' => 0, 'private' => 1, 'confidential' => 2);
     private $server_timezone;
 
-    private $db_events = 'events';
-    private $db_calendars = 'calendars';
-    private $db_attachments = 'attachments';
     private $db_colors = 'colors';
 
     private $handle;
-    private $calendarMock;
+
+    private $ocCalendar;
+    private $mailbox;
+    private $session;
+    private $mapiProfile;
+    private $mapi;
+    private $username;
+
+    private $events = array();
+    private $createdEventId = false;
 
     /**
      * Default destructor
      */
     public function __destruct()
     {
+        $this->debug_msg("\nError => Starting the destructor\n");
+        $this->debug_msg("Destructing MAPI objects\n");
+        unset($this->ocCalendar);
+        unset($this->mailbox);
+        unset($this->session);
+        unset($this->mapiProfile);
+        unset($this->mapi);
+        $this->debug_msg("\nError => Exiting the destructor\n");
         fclose($this->handle);
     }
 
     /**
      * Default constructor
      */
-    public function __construct($cal)
+    public function __construct($cal, $profileName)
     {
-        $file = '/var/log/roundcube/my_debug.txt';
-        $this->handle = fopen($file, 'a');
-        fwrite($this->handle, "\nWarning => Starting the contructor\n");
+        $this->handle = fopen(OpenchangeConfig::$logLocation, 'a');
+        $this->debug_msg("\nError => Starting the contructor\n");
+
+        //Creating the OC binding
+        /* TODO: Defensive code here */
+        $this->debug_msg("Profile name: " . $profileName . "\n");
+
+        $this->username = $profileName;
+        $this->mapi = new MAPIProfileDB(OpenchangeConfig::$profileLocation);
+        $this->mapiProfile = $this->mapi->getProfile($profileName);
+        $this->session = $this->mapiProfile->logon();
+        $this->mailbox = $this->session->mailbox();
+        $this->ocCalendar = $this->mailbox->calendar();
 
         $this->cal = $cal;
         $this->rc = $cal->rc;
@@ -75,45 +102,65 @@ class zentyal_openchange_driver extends calendar_driver
         // load library classes
         require_once($this->cal->home . '/lib/Horde_Date_Recurrence.php');
 
-        // mocking
-        require_once($this->cal->home . '/lib/CalendarMock.php');
-        $this->calendarMock = new CalendarMock();
-
         // read database config
-        $db = $this->rc->get_dbh();
-        $this->db_events = $this->rc->config->get('db_table_events', $db->table_name($this->db_events));
-        $this->db_calendars = $this->rc->config->get('db_table_calendars', $db->table_name($this->db_calendars));
-        $this->db_attachments = $this->rc->config->get('db_table_attachments', $db->table_name($this->db_attachments));
+        $this->db_colors= $this->rc->config->get('db_table_colors', 'colors');
 
         $this->_read_calendars();
     }
+
+    private function fetchEvents()
+    {
+        $this->debug_msg("\nStarting FetchEvents\n");
+        $table = $this->ocCalendar->getMessageTable();
+        $messages = $table->getMessages();
+
+        $this->debug_msg("The number of events in the table is: " . count($messages) . "\n");
+
+        foreach ($messages as $message) {
+            $record = OCParsing::getFullEventProps($this->ocCalendar, $message);
+            array_push($this->events, $record);
+            $this->debug_msg("\nShowing a event:\n");
+            $this->debug_msg(serialize($record) . "\n\n");
+        }
+        unset($message);
+        unset($messages);
+        unset($table);
+    }
+
+    private function debug_msg($message)
+    {
+        if (OpenchangeConfig::$debugEnabled)
+            fwrite($this->handle, $message);
+    }
+
 
     /**
      * Read available calendars for the current user and store them internally
      */
     private function _read_calendars()
     {
-        fwrite($this->handle, "\nStarting _read_calendars\n");
+        $this->debug_msg("\nStarting _read_calendars\n");
+
+        $cal_id = $this->ocCalendar->getID();
+        $calendar['showalarms'] = false;
+        $calendar['active'] = true;
+        $calendar['name'] = $this->ocCalendar->getName();
+        $calendar['id'] = $cal_id;
+        $calendar['calendar_id'] = $cal_id;
+        $calendar['user_id'] = $this->rc->user->ID;
+        $calendar['readonly'] = false;
+
+        $calendar_ids = array();
+        array_push($calendar_ids, $calendar['id']);
+
+        $this->calendars[$calendar['calendar_id']] = $calendar;
+        $this->calendar_ids = join(',', $calendar_ids);
+
+        $this->debug_msg("The calendar ids are: " . $this->calendar_ids . "\n");
+
         /* TODO: hidden calendars from config?
            $hidden = array_filter(explode(',', $this->rc->config->get('hidden_calendars', '')));
          */
-        if (!empty($this->rc->user->ID)) {
-            $calendar_ids = array();
-            $result = $this->rc->db->query(
-                    "SELECT *, calendar_id AS id FROM " . $this->db_calendars . "
-                    WHERE user_id=?
-                    ORDER BY name",
-                    $this->rc->user->ID
-                    );
-            while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
-                $arr['showalarms'] = intval($arr['showalarms']);
-                $arr['active']     = !in_array($arr['id'], $hidden);
-                $arr['name']       = html::quote($arr['name']);
-                $this->calendars[$arr['calendar_id']] = $arr;
-                $calendar_ids[] = $this->rc->db->quote($arr['calendar_id']);
-            }
-            $this->calendar_ids = join(',', $calendar_ids);
-        }
     }
 
     /**
@@ -126,25 +173,27 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function list_calendars($active = false, $personal = false)
     {
-        fwrite($this->handle, "\nStarting list_calendars\n");
+        $this->debug_msg("\nStarting list_calendars\n");
         // attempt to create a default calendar for this user
         if (empty($this->calendars)) {
-            if ($this->create_calendar(array('name' => 'Default', 'color' => 'cc0000')))
-                $this->_read_calendars();
+            $this->_read_calendars();
         }
 
-        // mocking
-        /*$mockCalendar = $this->calendarMock->generateCalendar("69","1", "OC", "cccc00", 0, "69", true);
-          $this->calendars[$mockCalendar['calendar_id']] =  $mockCalendar;
-          array_push($calendar_ids, $mockCalendar['calendar_id']);
-          $this->calendar_ids .= "," . $mockCalendar['calendar_id'];*/
-
         $calendars = $this->calendars;
+
+        $this->debug_msg("All the calendars to show are: \n");
+        foreach ($this->calendars as $key => $calc) {
+            $this->debug_msg("For the key: " . $key . "\n");
+            try {
+                $this->debug_msg(serialize($calc) . "\n");
+            } catch(Exception $e){
+            }
+        }
 
         // If there is no color assigned to a calendar, generate it
         $this->checkAndGetCalendarsColor();
 
-        fwrite($this->handle, "How many cals: " . count($calendars) . "\n");
+        $this->debug_msg("How many cals: " . count($calendars) . "\n");
 
         // filter active calendars
         if ($active) {
@@ -154,9 +203,8 @@ class zentyal_openchange_driver extends calendar_driver
                 }
             }
         }
+        $this->debug_msg("Ending list_calendars\n");
 
-        // 'personal' is unsupported in this driver
-        fwrite($this->handle, serialize($this->calendars) . "\n");
         return $calendars;
     }
 
@@ -167,7 +215,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function checkAndGetCalendarsColor()
     {
-        fwrite($this->handle, "\nStarting checkAndGetCalendarsColor\n");
+        $this->debug_msg("\nStarting checkAndGetCalendarsColor\n");
         // Look for the colors associated with the given calendars
         // 1st => Build the WHERE SQL clause
         $whereClause = "";
@@ -175,7 +223,7 @@ class zentyal_openchange_driver extends calendar_driver
             if ($whereClause)
                 $whereClause .= " OR ";
 
-            $whereClause .= "(calendar_id=" . $calendar['id'] .
+            $whereClause .= "(calendar_id=\"" . $calendar['id'] . "\"" .
                     " AND user_id=" . $this->rc->user->ID . ")";
         }
 
@@ -183,28 +231,26 @@ class zentyal_openchange_driver extends calendar_driver
         $query = "SELECT * FROM " . $this->db_colors. "
                 WHERE " . $whereClause;
         $calendarColors= $this->rc->db->query($query);
-        fwrite($this->handle, "The colors query is: " . $query . "\n");
-        fwrite($this->handle, "The colors query where clause is: " . $whereClause . "\n");
+//        $this->debug_msg("The colors query is: " . $query . "\n");
+//        $this->debug_msg("The colors query where clause is: " . $whereClause . "\n");
 
         while ($calendarColors && ($arr = $this->rc->db->fetch_assoc($calendarColors))) {
             $colors[$arr['calendar_id']] = $arr;
         }
 
-        ob_start();var_dump($colors);
-        fwrite($this->handle, "The colors are: " . ob_get_clean() . "\n");
+//        $this->debug_msg("The colors are: " . serialize($colors) . "\n");
 
         // If we have found a color, add it to the calendar, or generate it
 
         foreach ($this->calendars as $calendar) {
-            if ($colors[$calendar['calendar_id']]) {
-                $this->calendars[$calendar['calendar_id']]['color'] =
-                    $colors[$calendar['calendar_id']]['color'];
+            if ($colors[$calendar['id']]) {
+                $this->calendars[$calendar['id']]['color'] =
+                    $colors[$calendar['id']]['color'];
             } else {
-                $this->calendars[$calendar['calendar_id']]['color'] =
-                    $this->createColor($calendar['calendar_id'], $calendar['user_id']);
+                $this->calendars[$calendar['id']]['color'] =
+                    $this->createColor($calendar['id'], $calendar['user_id']);
             }
         }
-
     }
 
     /**
@@ -217,16 +263,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function create_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting create_calendar\n");
-        $result = $this->rc->db->query(
-                "INSERT INTO " . $this->db_calendars . "
-                (user_id, name, color, showalarms)
-                VALUES (?, ?, ?, ?)",
-                $this->rc->user->ID,
-                $prop['name'],
-                $prop['color'],
-                $prop['showalarms']?1:0
-                );
+        $this->debug_msg("\nStarting create_calendar\n");
 
         // Creating a custom color entry for the calendar
         $calendarId = $this->rc->db->insert_id($this->db_calendars);
@@ -234,7 +271,7 @@ class zentyal_openchange_driver extends calendar_driver
         $colorResult = $this->rc->db->insert_id($this->colors);
 
         if ($colorResult)
-            fwrite($this->handle, "Color " . $colorResult . " has been created\n");
+            $this->debug_msg("Color " . $colorResult . " has been created\n");
 
         if ($result)
             return $this->rc->db->insert_id($this->db_calendars);
@@ -247,7 +284,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function createColor($calendar, $user, $color=NULL)
     {
-        fwrite($this->handle, "\nStarting createColor\n");
+        $this->debug_msg("\nStarting createColor\n");
         if (! $color) {
             $color = $this->generateColorFromId($calendar);
         }
@@ -278,7 +315,7 @@ class zentyal_openchange_driver extends calendar_driver
             $idNumber = round($idNumber / (100^$i));
         }
 
-        fwrite($this->handle, "The generated color is: " . $color . "\n");
+        $this->debug_msg("The generated color is: " . $color . "\n");
 
         return $color;
     }
@@ -290,18 +327,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function edit_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting edit_calendar\n");
-        $query = $this->rc->db->query(
-                "UPDATE " . $this->db_calendars . "
-                SET   name=?, color=?, showalarms=?
-                WHERE calendar_id=?
-                AND   user_id=?",
-                $prop['name'],
-                $prop['color'],
-                $prop['showalarms']?1:0,
-                $prop['id'],
-                $this->rc->user->ID
-                );
+        $this->debug_msg("\nStarting edit_calendar\n");
 
         $colorQuery = $this->rc->db->query(
                 "UPDATE " . $this->db_colors . "
@@ -315,9 +341,9 @@ class zentyal_openchange_driver extends calendar_driver
 
         $colorResult = $this->rc->db->affected_rows($colorQuery);
         if ($colorResult)
-            fwrite($this->handle, "Colors affected: " . $colorResult . "\n");
+            $this->debug_msg("Colors affected: " . $colorResult . "\n");
 
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -328,7 +354,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function subscribe_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting subscribe_calendar\n");
+        $this->debug_msg("\nStarting subscribe_calendar\n");
         $hidden = array_flip(explode(',', $this->rc->config->get('hidden_calendars', '')));
 
         if ($prop['active'])
@@ -346,17 +372,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function remove_calendar($prop)
     {
-        fwrite($this->handle, "\nStarting remove_calendar\n");
+        $this->debug_msg("\nStarting remove_calendar\n");
         if (!$this->calendars[$prop['id']])
             return false;
-
-        // events and attachments will be deleted by foreign key cascade
-
-        $query = $this->rc->db->query(
-                "DELETE FROM " . $this->db_calendars . "
-                WHERE calendar_id=?",
-                $prop['id']
-                );
 
         $colorQuery = $this->rc->db->query(
                 "DELETE FROM " . $this->db_colors . "
@@ -366,7 +384,7 @@ class zentyal_openchange_driver extends calendar_driver
 
         $colorResult = $this->rc->db->affected_rows($colorQuery);
         if ($colorResult)
-            fwrite($this->handle, "Colors affected: " . $colorResult . "\n");
+            $this->debug_msg("Colors affected: " . $colorResult . "\n");
 
         return $this->rc->db->affected_rows($query);
     }
@@ -379,7 +397,8 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function new_event($event)
     {
-        fwrite($this->handle, "\nStarting new_event\n");
+        $this->debug_msg("\nStarting new_event\n");
+        $this->debug_msg(serialize($event) . "\n");
         if (!$this->validate($event))
             return false;
 
@@ -389,51 +408,18 @@ class zentyal_openchange_driver extends calendar_driver
             if (!$event['calendar'])
                 $event['calendar'] = reset(array_keys($this->calendars));
 
-            $event = $this->_save_preprocess($event);
+            $properties = OCParsing::parseRc2OcEvent($event);
 
-            $this->rc->db->query(sprintf(
-                        "INSERT INTO " . $this->db_events . "
-                        (calendar_id, created, changed, uid, %s, %s, all_day, recurrence, title, description, location, categories, url, free_busy, priority, sensitivity, attendees, alarms, notifyat)
-                        VALUES (?, %s, %s, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        $this->rc->db->quote_identifier('start'),
-                        $this->rc->db->quote_identifier('end'),
-                        $this->rc->db->now(),
-                        $this->rc->db->now()
-                        ),
-                    $event['calendar'],
-                    strval($event['uid']),
-                    $event['start']->format(self::DB_DATE_FORMAT),
-                    $event['end']->format(self::DB_DATE_FORMAT),
-                    intval($event['all_day']),
-                    $event['_recurrence'],
-                    strval($event['title']),
-                    strval($event['description']),
-                    strval($event['location']),
-                    strval($event['categories']),
-                    strval($event['url']),
-                    intval($event['free_busy']),
-                    intval($event['priority']),
-                    intval($event['sensitivity']),
-                    $event['attendees'],
-                    $event['alarms'],
-                    $event['notifyat']
-                        );
+            $this->debug_msg("The properties we set:\n");
+            ob_start(); var_dump($properties);
+            $this->debug_msg(ob_get_clean());
+            $newEevent = OCParsing::createWithProperties($this->ocCalendar, $properties);
 
-            $event_id = $this->rc->db->insert_id($this->db_events);
+            $event_id = $newEevent->getID();
+            unset($newEevent);
 
-            if ($event_id) {
-                $event['id'] = $event_id;
-
-                // add attachments
-                if (!empty($event['attachments'])) {
-                    foreach ($event['attachments'] as $attachment) {
-                        $this->add_attachment($attachment, $event_id);
-                        unset($attachment);
-                    }
-                }
-
-                $this->_update_recurring($event);
-            }
+            $this->createdEventId = $event_id;
+            $this->debug_msg("The id returned is: " . $event_id . "\n");
 
             return $event_id;
         }
@@ -449,102 +435,19 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function edit_event($event)
     {
-        fwrite($this->handle, "\nStarting edit_event\n");
+        $this->debug_msg("\nStarting edit_event\n");
         if (!empty($this->calendars)) {
             $update_master = false;
             $update_recurring = true;
             $old = $this->get_event($event);
 
-            // increment sequence number
-            if ($old['sequence'] && empty($event['sequence']))
-                $event['sequence'] = max($event['sequence'], $old['sequence']+1);
+            $event = OCParsing::checkAllDayConsistency($event);
+            $properties = OCParsing::parseRc2OcEvent($event);
+            $ocEvent = $this->ocCalendar->openMessage($old['id'], 1);
+            $setResult = OcContactsParser::setProperties($ocEvent, $properties);
+            $ocEvent->save();
 
-            // modify a recurring event, check submitted savemode to do the right things
-            if ($old['recurrence'] || $old['recurrence_id']) {
-                $master = $old['recurrence_id'] ? $this->get_event(array('id' => $old['recurrence_id'])) : $old;
-
-                // keep saved exceptions (not submitted by the client)
-                if ($old['recurrence']['EXDATE'])
-                    $event['recurrence']['EXDATE'] = $old['recurrence']['EXDATE'];
-
-                switch ($event['_savemode']) {
-                    case 'new':
-                        $event['uid'] = $this->cal->generate_uid();
-                        return $this->new_event($event);
-
-                    case 'current':
-                        // add exception to master event
-                        $master['recurrence']['EXDATE'][] = $old['start'];
-                        $update_master = true;
-
-                        // just update this occurence (decouple from master)
-                        $update_recurring = false;
-                        $event['recurrence_id'] = 0;
-                        $event['recurrence'] = array();
-                        break;
-
-                    case 'future':
-                        if ($master['id'] != $event['id']) {
-                            // set until-date on master event, then save this instance as new recurring event
-                            $master['recurrence']['UNTIL'] = clone $event['start'];
-                            $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
-                            unset($master['recurrence']['COUNT']);
-                            $update_master = true;
-
-                            // if recurrence COUNT, update value to the correct number of future occurences
-                            if ($event['recurrence']['COUNT']) {
-                                $fromdate = clone $event['start'];
-                                $fromdate->setTimezone($this->server_timezone);
-                                $sqlresult = $this->rc->db->query(sprintf(
-                                            "SELECT event_id FROM " . $this->db_events . "
-                                            WHERE calendar_id IN (%s)
-                                            AND %s >= ?
-                                            AND recurrence_id=?",
-                                            $this->calendar_ids,
-                                            $this->rc->db->quote_identifier('start')
-                                            ),
-                                        $fromdate->format(self::DB_DATE_FORMAT),
-                                        $master['id']);
-                                if ($count = $this->rc->db->num_rows($sqlresult))
-                                    $event['recurrence']['COUNT'] = $count;
-                            }
-
-                            $update_recurring = true;
-                            $event['recurrence_id'] = 0;
-                            break;
-                        }
-                        // else: 'future' == 'all' if modifying the master event
-
-                    default:  // 'all' is default
-                        $event['id'] = $master['id'];
-                        $event['recurrence_id'] = 0;
-
-                        // use start date from master but try to be smart on time or duration changes
-                        $old_start_date = $old['start']->format('Y-m-d');
-                        $old_start_time = $old['allday'] ? '' : $old['start']->format('H:i');
-                        $old_duration = $old['end']->format('U') - $old['start']->format('U');
-
-                        $new_start_date = $event['start']->format('Y-m-d');
-                        $new_start_time = $event['allday'] ? '' : $event['start']->format('H:i');
-                        $new_duration = $event['end']->format('U') - $event['start']->format('U');
-
-                        $diff = $old_start_date != $new_start_date || $old_start_time != $new_start_time || $old_duration != $new_duration;
-
-                        // shifted or resized
-                        if ($diff && ($old_start_date == $new_start_date || $old_duration == $new_duration)) {
-                            $event['start'] = $master['start']->add($old['start']->diff($event['start']));
-                            $event['end'] = clone $event['start'];
-                            $event['end']->add(new DateInterval('PT'.$new_duration.'S'));
-                        }
-                        break;
-                }
-            }
-
-            $success = $this->_update_event($event, $update_recurring);
-            if ($success && $update_master)
-                $this->_update_event($master, true);
-
-            return $success;
+            return True;
         }
 
         return false;
@@ -555,7 +458,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _save_preprocess($event)
     {
-        fwrite($this->handle, "\nStarting _save_preprocess\n");
+        $this->debug_msg("\nStarting _save_preprocess\n");
         // shift dates to server's timezone
         $event['start'] = clone $event['start'];
         $event['start']->setTimezone($this->server_timezone);
@@ -596,7 +499,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function _get_notification($event)
     {
-        fwrite($this->handle, "\nStarting _get_notification\n");
+        $this->debug_msg("\nStarting _get_notification\n");
         if ($event['alarms'] && $event['start'] > new DateTime()) {
             $alarm = libcalendaring::get_next_alarm($event);
 
@@ -608,126 +511,6 @@ class zentyal_openchange_driver extends calendar_driver
     }
 
     /**
-     * Save the given event record to database
-     *
-     * @param array Event data, already passed through self::_save_preprocess()
-     * @param boolean True if recurring events instances should be updated, too
-     */
-    private function _update_event($event, $update_recurring = true)
-    {
-        fwrite($this->handle, "\nStarting _update_event\n");
-        $event = $this->_save_preprocess($event);
-        $sql_set = array();
-        $set_cols = array('start', 'end', 'all_day', 'recurrence_id', 'sequence', 'title', 'description', 'location', 'categories', 'url', 'free_busy', 'priority', 'sensitivity', 'attendees', 'alarms', 'notifyat');
-        foreach ($set_cols as $col) {
-            if (is_object($event[$col]) && is_a($event[$col], 'DateTime'))
-                $sql_set[] = $this->rc->db->quote_identifier($col) . '=' . $this->rc->db->quote($event[$col]->format(self::DB_DATE_FORMAT));
-            else if (isset($event[$col]))
-                $sql_set[] = $this->rc->db->quote_identifier($col) . '=' . $this->rc->db->quote($event[$col]);
-        }
-
-        if ($event['_recurrence'])
-            $sql_set[] = $this->rc->db->quote_identifier('recurrence') . '=' . $this->rc->db->quote($event['_recurrence']);
-
-        if ($event['_fromcalendar'] && $event['_fromcalendar'] != $event['calendar'])
-            $sql_set[] = 'calendar_id=' . $this->rc->db->quote($event['calendar']);
-
-        $query = $this->rc->db->query(sprintf(
-                    "UPDATE " . $this->db_events . "
-                    SET   changed=%s %s
-                    WHERE event_id=?
-                    AND   calendar_id IN (" . $this->calendar_ids . ")",
-                    $this->rc->db->now(),
-                    ($sql_set ? ', ' . join(', ', $sql_set) : '')
-                    ),
-                $event['id']
-                );
-
-        $success = $this->rc->db->affected_rows($query);
-
-        // add attachments
-        if ($success && !empty($event['attachments'])) {
-            foreach ($event['attachments'] as $attachment) {
-                $this->add_attachment($attachment, $event['id']);
-                unset($attachment);
-            }
-        }
-
-        // remove attachments
-        if ($success && !empty($event['deleted_attachments'])) {
-            foreach ($event['deleted_attachments'] as $attachment) {
-                $this->remove_attachment($attachment, $event['id']);
-            }
-        }
-
-        if ($success) {
-            unset($this->cache[$event['id']]);
-            if ($update_recurring)
-                $this->_update_recurring($event);
-        }
-
-        return $success;
-    }
-
-    /**
-     * Insert "fake" entries for recurring occurences of this event
-     */
-    private function _update_recurring($event)
-    {
-        fwrite($this->handle, "\nStarting _update_recurring\n");
-        if (empty($this->calendars))
-            return;
-
-        // clear existing recurrence copies
-        $this->rc->db->query(
-                "DELETE FROM " . $this->db_events . "
-                WHERE recurrence_id=?
-                AND calendar_id IN (" . $this->calendar_ids . ")",
-                $event['id']
-                );
-
-        // create new fake entries
-        if ($event['recurrence']) {
-            // include library class
-            require_once($this->cal->home . '/lib/calendar_recurrence.php');
-
-            $recurrence = new calendar_recurrence($this->cal, $event);
-
-            $count = 0;
-            $duration = $event['start']->diff($event['end']);
-            while ($next_start = $recurrence->next_start()) {
-                $next_start->setTimezone($this->server_timezone);
-                $next_end = clone $next_start;
-                $next_end->add($duration);
-                $notify_at = $this->_get_notification(array('alarms' => $event['alarms'], 'start' => $next_start, 'end' => $next_end));
-                $query = $this->rc->db->query(sprintf(
-                            "INSERT INTO " . $this->db_events . "
-                            (calendar_id, recurrence_id, created, changed, uid, %s, %s, all_day, recurrence, title, description, location, categories, url, free_busy, priority, sensitivity, alarms, notifyat)
-                            SELECT calendar_id, ?, %s, %s, uid, ?, ?, all_day, recurrence, title, description, location, categories, url, free_busy, priority, sensitivity, alarms, ?
-                            FROM  " . $this->db_events . " WHERE event_id=? AND calendar_id IN (" . $this->calendar_ids . ")",
-                            $this->rc->db->quote_identifier('start'),
-                            $this->rc->db->quote_identifier('end'),
-                            $this->rc->db->now(),
-                            $this->rc->db->now()
-                            ),
-                        $event['id'],
-                        $next_start->format(self::DB_DATE_FORMAT),
-                        $next_end->format(self::DB_DATE_FORMAT),
-                        $notify_at,
-                        $event['id']
-                        );
-
-                if (!$this->rc->db->affected_rows($query))
-                    break;
-
-                // stop adding events for inifinite recurrence after 20 years
-                if (++$count > 999 || (!$recurrence->recurEnd && !$recurrence->recurCount && $next_start->format('Y') > date('Y') + 20))
-                    break;
-            }
-        }
-    }
-
-    /**
      * Move a single event
      *
      * @param array Hash array with event properties
@@ -735,9 +518,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function move_event($event)
     {
-        fwrite($this->handle, "\nStarting more_event\n");
+        $this->debug_msg("\nStarting more_event\n");
         ob_start();var_dump($event);
-        fwrite($this->handle, ob_get_clean() . "\n");
+        $this->debug_msg(ob_get_clean() . "\n");
         // let edit_event() do all the magic
         return $this->edit_event($event + (array)$this->get_event($event));
     }
@@ -750,7 +533,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function resize_event($event)
     {
-        fwrite($this->handle, "\nStarting resize_event\n");
+        $this->debug_msg("\nStarting resize_event\n");
         // let edit_event() do all the magic
         return $this->edit_event($event + (array)$this->get_event($event));
     }
@@ -765,75 +548,16 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function remove_event($event, $force = true)
     {
-        fwrite($this->handle, "\nStarting remove_event\n");
+        $this->debug_msg("\nStarting remove_event\n");
         ob_start();var_dump($event);
-        fwrite($this->handle, ob_get_clean() . "\n");
+        $this->debug_msg(ob_get_clean() . "\n");
         if (!empty($this->calendars)) {
             $event += (array)$this->get_event($event);
-            $master = $event;
-            $update_master = false;
-            $savemode = 'all';
 
-            // read master if deleting a recurring event
-            if ($event['recurrence'] || $event['recurrence_id']) {
-                $master = $event['recurrence_id'] ? $this->get_event(array('id' => $event['recurrence_id'])) : $event;
-                $savemode = $event['_savemode'];
-            }
+            //At event["calendar"] there is the ID of the calendar, use?
+            $deletingResult = OCParsing::deleteEvents($this->ocCalendar, $event['id']);
 
-            switch ($savemode) {
-                case 'current':
-                    // add exception to master event
-                    $master['recurrence']['EXDATE'][] = $event['start'];
-                    $update_master = true;
-
-                    // just delete this single occurence
-                    $query = $this->rc->db->query(
-                            "DELETE FROM " . $this->db_events . "
-                            WHERE calendar_id IN (" . $this->calendar_ids . ")
-                            AND event_id=?",
-                            $event['id']
-                            );
-                    break;
-
-                case 'future':
-                    if ($master['id'] != $event['id']) {
-                        // set until-date on master event
-                        $master['recurrence']['UNTIL'] = clone $event['start'];
-                        $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
-                        unset($master['recurrence']['COUNT']);
-                        $update_master = true;
-
-                        // delete this and all future instances
-                        $fromdate = clone $event['start'];
-                        $fromdate->setTimezone($this->server_timezone);
-                        $query = $this->rc->db->query(
-                                "DELETE FROM " . $this->db_events . "
-                                WHERE calendar_id IN (" . $this->calendar_ids . ")
-                                AND " . $this->rc->db->quote_identifier('start') . " >= ?
-                                AND recurrence_id=?",
-                                $fromdate->format(self::DB_DATE_FORMAT),
-                                $master['id']
-                                );
-                        break;
-                    }
-                    // else: future == all if modifying the master event
-
-                default:  // 'all' is default
-                    $query = $this->rc->db->query(
-                            "DELETE FROM " . $this->db_events . "
-                            WHERE (event_id=? OR recurrence_id=?)
-                            AND calendar_id IN (" . $this->calendar_ids . ")",
-                            $master['id'],
-                            $master['id']
-                            );
-                    break;
-            }
-
-            $success = $this->rc->db->affected_rows($query);
-            if ($success && $update_master)
-                $this->_update_event($master, true);
-
-            return $success;
+            return true;
         }
 
         return false;
@@ -849,42 +573,22 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function get_event($event, $writeable = false, $active = false, $personal = false)
     {
-        fwrite($this->handle, "\nStarting get_event\n");
-        $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
-        $col = is_array($event) && is_numeric($id) ? 'event_id' : 'uid';
+        $this->debug_msg("\nStarting get_event\n");
 
-        if ($this->cache[$id])
-            return $this->cache[$id];
+        if ($this->createdEventId){
+            $id = $this->createdEventId;
+            $this->createdEventId = false;
+        } else
+            $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
 
-        if ($active) {
-            $calendars = $this->calendars;
-            foreach ($calendars as $idx => $cal) {
-                if (!$cal['active']) {
-                    unset($calendars[$idx]);
-                }
-            }
-            $cals = join(',', $calendars);
-        }
-        else {
-            $cals = $this->calendar_ids;
-        }
+        $message = $this->ocCalendar->openMessage($id);
 
-        $result = $this->rc->db->query(sprintf(
-                    "SELECT e.*, (SELECT COUNT(attachment_id) FROM " . $this->db_attachments . "
-            WHERE event_id = e.event_id OR event_id = e.recurrence_id) AS _attachments
-                    FROM " . $this->db_events . " AS e
-                    WHERE e.calendar_id IN (%s)
-                    AND e.$col=?",
-                    $cals
-                    ),
-                $id);
+        $event = OCParsing::getFullEventProps($this->ocCalendar, $message);
+        $event = OCParsing::parseEventOc2Rc($event);
 
-        if ($result && ($event = $this->rc->db->fetch_assoc($result)) && $event['event_id']) {
-            $this->cache[$id] = $this->_read_postprocess($event);
-            return $this->cache[$id];
-        }
+        $this->debug_msg("\nEnding get_event\n");
 
-        return false;
+        return $event;
     }
 
     /**
@@ -894,100 +598,53 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function load_events($start, $end, $query = null, $calendars = null)
     {
-        fwrite($this->handle, "\nStarting load_events\n");
-        if (empty($calendars))
-            $calendars = array_keys($this->calendars);
-        else if (is_string($calendars))
-            $calendars = explode(',', $calendars);
+        $this->debug_msg("\nStarting load_events\n");
 
-        // only allow to select from calendars of this use
-        $calendar_ids = array_map(array($this->rc->db, 'quote'), array_intersect($calendars, array_keys($this->calendars)));
+        $this->fetchEvents();
 
-        // compose (slow) SQL query for searching
-        // FIXME: improve searching using a dedicated col and normalized values
-        if ($query) {
-            foreach (array('title','location','description','categories','attendees') as $col)
-                $sql_query[] = $this->rc->db->ilike($col, '%'.$query.'%');
-            $sql_add = 'AND (' . join(' OR ', $sql_query) . ')';
-                    }
+        $events = array();
 
-                    $events = array();
-                    if (!empty($calendar_ids)) {
-                    $result = $this->rc->db->query(sprintf(
-                            "SELECT e.*, (SELECT COUNT(attachment_id) FROM " . $this->db_attachments . "
-                        WHERE event_id = e.event_id OR event_id = e.recurrence_id) AS _attachments
-                            FROM " . $this->db_events . " AS e
-                            WHERE e.calendar_id IN (%s)
-                            AND e.start <= %s AND e.end >= %s
-                            %s
-                            GROUP BY e.event_id",
-                            join(',', $calendar_ids),
-                            $this->rc->db->fromunixtime($end),
-                            $this->rc->db->fromunixtime($start),
-                            $sql_add
-                            ));
+        $attendees = array(array(
+            'name' => "",
+            'status' => "ACCEPTED",
+            'role' => "ORGANIZER",
+            'email' => $this->username,
+        ));
 
-                    while ($result && ($event = $this->rc->db->fetch_assoc($result))) {
-                    $events[] = $this->_read_postprocess($event);
-                    }
-                    }
+        foreach ($this->events as $event) {
+            $tempEvent = OCParsing::parseEventOc2Rc($event);
+            $tempEvent['attendees'] = $attendees;
+            array_push($events, $tempEvent);
+        }
 
-                    return $events;
+        foreach ($events as $event) {
+            $this->debug_msg("\nThe event id is: " . $event['id'] . "\n");
+            $this->debug_msg(serialize($event) . "\n");
+        }
+        $this->debug_msg("Ending load_events\n");
+
+        return $events;
     }
 
     /**
-     * Convert sql record into a rcube style event object
+     * Gets the properties from the appointment and fill the result with
+     * in the correct way.
+     *
+     * @param $event MapiMessage
+     *
+     * @return rcube_kolab_event
      */
-    private function _read_postprocess($event)
+    private function buildEventFromProperties($event)
     {
-        fwrite($this->handle, "\nStarting _read_postprocess\n");
-        $free_busy_map = array_flip($this->free_busy_map);
-        $sensitivity_map = array_flip($this->sensitivity_map);
-
-        $event['id'] = $event['event_id'];
-        $event['start'] = new DateTime($event['start']);
-        $event['end'] = new DateTime($event['end']);
-        $event['allday'] = intval($event['all_day']);
-        $event['created'] = new DateTime($event['created']);
-        $event['changed'] = new DateTime($event['changed']);
-        $event['free_busy'] = $free_busy_map[$event['free_busy']];
-        $event['sensitivity'] = $sensitivity_map[$event['sensitivity']];
-        $event['calendar'] = $event['calendar_id'];
-        $event['recurrence_id'] = intval($event['recurrence_id']);
-
-        // parse recurrence rule
-        if ($event['recurrence'] && preg_match_all('/([A-Z]+)=([^;]+);?/', $event['recurrence'], $m, PREG_SET_ORDER)) {
-            $event['recurrence'] = array();
-            foreach ($m as $rr) {
-                if (is_numeric($rr[2]))
-                    $rr[2] = intval($rr[2]);
-                else if ($rr[1] == 'UNTIL')
-                    $rr[2] = date_create($rr[2]);
-                else if ($rr[1] == 'EXDATE')
-                    $rr[2] = array_map('date_create', explode(',', $rr[2]));
-                $event['recurrence'][$rr[1]] = $rr[2];
-            }
-        }
-
-        if ($event['_attachments'] > 0)
-            $event['attachments'] = (array)$this->list_attachments($event);
-
-        // decode serialized event attendees
-        if ($event['attendees']) {
-            $attendees = array();
-            foreach (explode("\n", $event['attendees']) as $line) {
-                $att = array();
-                foreach (rcube_utils::explode_quoted_string(';', $line) as $prop) {
-                    list($key, $value) = explode("=", $prop);
-                    $att[strtolower($key)] = stripslashes(trim($value, '""'));
-                }
-                $attendees[] = $att;
-            }
-            $event['attendees'] = $attendees;
-        }
-
-        unset($event['event_id'], $event['calendar_id'], $event['notifyat'], $event['all_day'], $event['_attachments']);
+        $this->debug_msg("\nStarting buildEventFromProperties\n");
         return $event;
+
+        $result = array();
+
+        // TODO: set the $result['id'] component
+        // TODO: set the $result['calendar'] = calendar_id
+
+        return $result;
     }
 
     /**
@@ -997,7 +654,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function pending_alarms($time, $calendars = null)
     {
-        fwrite($this->handle, "\nStarting pending_alarms\n");
+        $this->debug_msg("\nStarting pending_alarms\n");
         if (empty($calendars))
             $calendars = array_keys($this->calendars);
         else if (is_string($calendars))
@@ -1009,23 +666,7 @@ class zentyal_openchange_driver extends calendar_driver
             if ($this->calendars[$cid] && $this->calendars[$cid]['showalarms'])
                 $calendar_ids[] = $cid;
         }
-        $calendar_ids = array_map(array($this->rc->db, 'quote'), $calendar_ids);
-
         $alarms = array();
-        if (!empty($calendar_ids)) {
-            $result = $this->rc->db->query(sprintf(
-                        "SELECT * FROM " . $this->db_events . "
-                        WHERE calendar_id IN (%s)
-                        AND notifyat <= %s AND %s > %s",
-                        join(',', $calendar_ids),
-                        $this->rc->db->fromunixtime($time),
-                        $this->rc->db->quote_identifier('end'),
-                        $this->rc->db->fromunixtime($time)
-                        ));
-
-            while ($result && ($event = $this->rc->db->fetch_assoc($result)))
-                $alarms[] = $this->_read_postprocess($event);
-        }
 
         return $alarms;
     }
@@ -1037,21 +678,10 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function dismiss_alarm($event_id, $snooze = 0)
     {
-        fwrite($this->handle, "\nStarting dismiss_alarm\n");
+        $this->debug_msg("\nStarting dismiss_alarm\n");
         // set new notifyat time or unset if not snoozed
-        $notify_at = $snooze > 0 ? date(self::DB_DATE_FORMAT, time() + $snooze) : null;
 
-        $query = $this->rc->db->query(sprintf(
-                    "UPDATE " . $this->db_events . "
-                    SET   changed=%s, notifyat=?
-                    WHERE event_id=?
-                    AND calendar_id IN (" . $this->calendar_ids . ")",
-                    $this->rc->db->now()),
-                $notify_at,
-                $event_id
-                );
-
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -1059,21 +689,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function add_attachment($attachment, $event_id)
     {
-        fwrite($this->handle, "\nStarting add_attachment\n");
-        $data = $attachment['data'] ? $attachment['data'] : file_get_contents($attachment['path']);
+        $this->debug_msg("\nStarting add_attachment\n");
 
-        $query = $this->rc->db->query(
-                "INSERT INTO " . $this->db_attachments .
-                " (event_id, filename, mimetype, size, data)" .
-                " VALUES (?, ?, ?, ?, ?)",
-                $event_id,
-                $attachment['name'],
-                $attachment['mimetype'],
-                strlen($data),
-                base64_encode($data)
-                );
-
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -1081,18 +699,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     private function remove_attachment($attachment_id, $event_id)
     {
-        fwrite($this->handle, "\nStarting remove_attachment\n");
-        $query = $this->rc->db->query(
-                "DELETE FROM " . $this->db_attachments .
-                " WHERE attachment_id = ?" .
-                " AND event_id IN (SELECT event_id FROM " . $this->db_events .
-                " WHERE event_id = ?"  .
-                " AND calendar_id IN (" . $this->calendar_ids . "))",
-                $attachment_id,
-                $event_id
-                );
+        $this->debug_msg("\nStarting remove_attachment\n");
 
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -1100,26 +709,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function list_attachments($event)
     {
-        fwrite($this->handle, "\nStarting list_attachments\n");
-        $attachments = array();
+        $this->debug_msg("\nStarting list_attachments\n");
 
-        if (!empty($this->calendar_ids)) {
-            $result = $this->rc->db->query(
-                    "SELECT attachment_id AS id, filename AS name, mimetype, size " .
-                    " FROM " . $this->db_attachments .
-                    " WHERE event_id IN (SELECT event_id FROM " . $this->db_events .
-                    " WHERE event_id=?"  .
-                    " AND calendar_id IN (" . $this->calendar_ids . "))".
-                    " ORDER BY filename",
-                    $event['recurrence_id'] ? $event['recurrence_id'] : $event['event_id']
-                    );
-
-            while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
-                $attachments[] = $arr;
-            }
-        }
-
-        return $attachments;
+        return array();
     }
 
     /**
@@ -1127,21 +719,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function get_attachment($id, $event)
     {
-        fwrite($this->handle, "\nStarting get_attachment\n");
-        if (!empty($this->calendar_ids)) {
-            $result = $this->rc->db->query(
-                    "SELECT attachment_id AS id, filename AS name, mimetype, size " .
-                    " FROM " . $this->db_attachments .
-                    " WHERE attachment_id=?".
-                    " AND event_id=?",
-                    $id,
-                    $event['recurrence_id'] ? $event['recurrence_id'] : $event['id']
-                    );
-
-            if ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
-                return $arr;
-            }
-        }
+        $this->debug_msg("\nStarting get_attachment\n");
 
         return null;
     }
@@ -1151,21 +729,7 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function get_attachment_body($id, $event)
     {
-        fwrite($this->handle, "\nStarting get_attachment_body\n");
-        if (!empty($this->calendar_ids)) {
-            $result = $this->rc->db->query(
-                    "SELECT data " .
-                    " FROM " . $this->db_attachments .
-                    " WHERE attachment_id=?".
-                    " AND event_id=?",
-                    $id,
-                    $event['id']
-                    );
-
-            if ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
-                return base64_decode($arr['data']);
-            }
-        }
+        $this->debug_msg("\nStarting get_attachment_body\n");
 
         return null;
     }
@@ -1175,16 +739,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function remove_category($name)
     {
-        fwrite($this->handle, "\nStarting remove_category\n");
-        $query = $this->rc->db->query(
-                "UPDATE " . $this->db_events . "
-                SET   categories=''
-                WHERE categories=?
-                AND   calendar_id IN (" . $this->calendar_ids . ")",
-                $name
-                );
+        $this->debug_msg("\nStarting remove_category\n");
 
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -1192,17 +749,9 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function replace_category($oldname, $name, $color)
     {
-        fwrite($this->handle, "\nStarting replace_category\n");
-        $query = $this->rc->db->query(
-                "UPDATE " . $this->db_events . "
-                SET   categories=?
-                WHERE categories=?
-                AND   calendar_id IN (" . $this->calendar_ids . ")",
-                $name,
-                $oldname
-                );
+        $this->debug_msg("\nStarting replace_category\n");
 
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
 }
