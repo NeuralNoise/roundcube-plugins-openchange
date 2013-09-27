@@ -41,7 +41,7 @@ class OcContactsParser
         PidTagHomeAddressCountry,PidLidWorkAddressCountry,
         PidTagOtherAddressCountry,PidLidInstantMessagingAddress,
         PidTagPersonalHomePage,PidTagBusinessHomePage, PidTagBody,
-        PidTagAttachDataBinary
+        //PidTagAttachDataBinary
     );
 
     /* OpenChangeProperty => array(RcubeFieldName, IsArray, HasSubFields) */
@@ -108,7 +108,7 @@ class OcContactsParser
 
             PidTagBody => array('field' => 'notes', 'isArray' => False, 'subfield' => False),
 
-            PidTagAttachDataBinary => array('field' => 'photo', 'isArray' => False, 'subfield' => False),
+            //PidTagAttachDataBinary => array('field' => 'photo', 'isArray' => False, 'subfield' => False),
             );
 
     /**
@@ -300,6 +300,27 @@ class OcContactsParser
         $exploded = explode("\r\n\n", $notes, -1);
 
         return join($exploded, "\n");
+    }
+
+    public static function parsePhotoOc2Rc($ocContact)
+    {
+        $photo = "";
+        $hasPicture = $ocContact->get(PidLidHasPicture);
+
+        if ($hasPicture){
+            $attachmentTable = $ocContact->getAttachmentTable();
+            $attachments = $attachmentTable->getAttachments();
+
+            foreach ($attachments as $attach) {
+                $photo = $attach->getAsBase64(PidTagAttachDataBinary);
+                break;
+            }
+
+            unset($attachments);
+            unset($attachmentTable);
+        }
+
+        return $photo;
     }
 }
 ?>

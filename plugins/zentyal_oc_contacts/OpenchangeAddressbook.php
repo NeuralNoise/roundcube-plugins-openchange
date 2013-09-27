@@ -288,6 +288,7 @@ class OpenchangeAddressbook extends rcube_addressbook
         $propsToGet = OcContactsParser::$full_contact_properties;
         $properties = OcContactsParser::getProperties($ocContact, $propsToGet);
         $contact = OcContactsParser::oc2RcParseProps($ocContact, $properties);
+        $contact['photo'] = OcContactsParser::parsePhotoOc2Rc($ocContact);
         $contact['ID'] = $id;
 
         $this->debug_msg("The full contact is: \n" . serialize($contact) . "\n");
