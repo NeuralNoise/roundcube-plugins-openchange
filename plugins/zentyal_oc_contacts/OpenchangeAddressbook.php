@@ -104,6 +104,8 @@ class OpenchangeAddressbook extends rcube_addressbook
 
             array_push($this->contacts, $record);
         }
+        unset($message);
+        unset($messages);
         $this->debug_msg(" - The number of fetched contacts is: " . count($this->contacts) . " - ");
     }
 

@@ -127,7 +127,7 @@ class zentyal_openchange_driver extends calendar_driver
             $this->debug_msg("\nShowing a event:\n");
             $this->debug_msg(serialize($record) . "\n\n");
         }
-
+        unset($message);
         unset($messages);
         unset($table);
     }
@@ -846,23 +846,7 @@ class zentyal_openchange_driver extends calendar_driver
             if ($this->calendars[$cid] && $this->calendars[$cid]['showalarms'])
                 $calendar_ids[] = $cid;
         }
-        $calendar_ids = array_map(array($this->rc->db, 'quote'), $calendar_ids);
-
         $alarms = array();
-        if (!empty($calendar_ids)) {
-            $result = $this->rc->db->query(sprintf(
-                        "SELECT * FROM " . $this->db_events . "
-                        WHERE calendar_id IN (%s)
-                        AND notifyat <= %s AND %s > %s",
-                        join(',', $calendar_ids),
-                        $this->rc->db->fromunixtime($time),
-                        $this->rc->db->quote_identifier('end'),
-                        $this->rc->db->fromunixtime($time)
-                        ));
-
-            while ($result && ($event = $this->rc->db->fetch_assoc($result)))
-                $alarms[] = $this->_read_postprocess($event);
-        }
 
         return $alarms;
     }

@@ -313,6 +313,7 @@ class OcContactsParser
 
             foreach ($attachments as $attach) {
                 $photo = $attach->getAsBase64(PidTagAttachDataBinary);
+                unset($attach);
                 break;
             }
 
