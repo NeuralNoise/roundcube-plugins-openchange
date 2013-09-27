@@ -71,13 +71,10 @@ class zentyal_oc_login extends rcube_plugin
         $username = $emailParts[0];
         $realm = $emailParts[1];
         $password = get_input_value('_pass', RCUBE_INPUT_POST);
-
         $profileName = get_input_value('_user', RCUBE_INPUT_POST);
         $pathDB = OpenchangeConfig::$profileLocation;
-
-        $server = $this->rc->config->get('ocLogin_server', 'localhost');
-
-        $domain = $this->rc->config->get('ocLogin_domain', "example");
+        $server = OpenchangeConfig::$openchangeServerIP;
+        $domain = OpenchangeConfig::$openchangeServerDomain;
 
         $mapiDB = new MAPIProfileDB($pathDB);
         $profile = $mapiDB->createAndGetProfile($profileName, $username, $password, $domain, $realm, $server);

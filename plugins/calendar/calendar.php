@@ -24,6 +24,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+require_once(dirname(__FILE__) . '/../OpenchangeConfig.php');
+
 class calendar extends rcube_plugin
 {
   const FREEBUSY_UNKNOWN = 0;
@@ -80,7 +82,7 @@ class calendar extends rcube_plugin
     $this->load_config();
 
     // load the Mapi Profile variables
-    $this->pathDB = $this->rc->config->get('ocLogin_DB_path', "/etc/openchange/profiles/profiles.ldb");
+    $this->pathDB = OpenchangeConfig::$profileLocation;
     $this->username = $_SESSION['username'];
 
     // load localizations
@@ -185,7 +187,6 @@ class calendar extends rcube_plugin
       return;
 
     $driver_name = $this->rc->config->get('calendar_driver', 'zentyal_openchange');
-    //$driver_name = $this->rc->config->get('calendar_driver', 'database');
     $driver_class = $driver_name . '_driver';
 
     require_once($this->home . '/drivers/calendar_driver.php');
