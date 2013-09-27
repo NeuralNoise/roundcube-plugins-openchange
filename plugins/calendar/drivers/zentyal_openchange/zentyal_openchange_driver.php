@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
+require_once(dirname(__FILE__) . '/../../../OpenchangeConfig.php');
 require_once(dirname(__FILE__) . '/../../lib/OCParsing.php');
 
 class zentyal_openchange_driver extends calendar_driver
@@ -49,9 +49,6 @@ class zentyal_openchange_driver extends calendar_driver
     private $db_colors = 'colors';
 
     private $handle;
-    private $debug = true;
-    private $file = '/var/log/roundcube/my_debug.txt';
-    private $oc_enabled = true;
 
     private $ocCalendar;
     private $mailbox;
@@ -69,14 +66,12 @@ class zentyal_openchange_driver extends calendar_driver
     public function __destruct()
     {
         $this->debug_msg("\nError => Starting the destructor\n");
-        if ($this->oc_enabled) {
-            $this->debug_msg("Destructing MAPI objects\n");
-            unset($this->ocCalendar);
-            unset($this->mailbox);
-            unset($this->session);
-            unset($this->mapiProfile);
-            unset($this->mapi);
-        }
+        $this->debug_msg("Destructing MAPI objects\n");
+        unset($this->ocCalendar);
+        unset($this->mailbox);
+        unset($this->session);
+        unset($this->mapiProfile);
+        unset($this->mapi);
         $this->debug_msg("\nError => Exiting the destructor\n");
         fclose($this->handle);
     }
@@ -84,17 +79,17 @@ class zentyal_openchange_driver extends calendar_driver
     /**
      * Default constructor
      */
-    public function __construct($cal, $pathDB, $profileName)
+    public function __construct($cal, $profileName)
     {
-        $this->handle = fopen($this->file, 'a');
+        $this->handle = fopen(OpenchangeConfig::$logLocation, 'a');
         $this->debug_msg("\nError => Starting the contructor\n");
 
         //Creating the OC binding
         /* TODO: Defensive code here */
-        $this->debug_msg("Profile path: " . $pathDB . " | profile name: " . $profileName . "\n");
+        $this->debug_msg("Profile name: " . $profileName . "\n");
 
         $this->username = $profileName;
-        $this->mapi = new MAPIProfileDB($pathDB);
+        $this->mapi = new MAPIProfileDB(OpenchangeConfig::$profileLocation);
         $this->mapiProfile = $this->mapi->getProfile($profileName);
         $this->session = $this->mapiProfile->logon();
         $this->mailbox = $this->session->mailbox();
@@ -134,7 +129,7 @@ class zentyal_openchange_driver extends calendar_driver
 
     private function debug_msg($message)
     {
-        if ($this->debug)
+        if (OpenchangeConfig::$debugEnabled)
             fwrite($this->handle, $message);
     }
 

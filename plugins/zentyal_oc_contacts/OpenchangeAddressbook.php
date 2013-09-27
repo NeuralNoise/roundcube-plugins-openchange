@@ -1,6 +1,6 @@
 <?php
 
-require_once(dirname(__FILE__) . '/ArrayContactsMock.php');
+require_once(dirname(__FILE__) . '/../OpenchangeConfig.php');
 require_once(dirname(__FILE__) . '/OcContactsParser.php');
 
 class OpenchangeAddressbook extends rcube_addressbook
@@ -25,9 +25,6 @@ class OpenchangeAddressbook extends rcube_addressbook
     private $contacts;
 
     private $handle;
-    private $debug = true;
-    private $file = '/var/log/roundcube/my_debug.txt';
-    private $oc_enabled = true;
 
     private $ocContacts;
     private $mailbox;
@@ -48,18 +45,16 @@ class OpenchangeAddressbook extends rcube_addressbook
     public function __destruct()
     {
         $this->debug_msg( "\nStarting the destructor\n");
-        if ($this->oc_enabled) {
-            unset($this->ocContacts);
-            unset($this->mailbox);
-            unset($this->session);
-            unset($this->mapiProfile);
-            unset($this->mapi);
-        }
+        unset($this->ocContacts);
+        unset($this->mailbox);
+        unset($this->session);
+        unset($this->mapiProfile);
+        unset($this->mapi);
         $this->debug_msg( "\nExiting the destructor\n");
         fclose($this->handle);
     }
 
-    public function __construct($id, $pathDB, $username)
+    public function __construct($id, $username)
     {
         $this->ready = true;
         $this->name = "Contacts";
@@ -69,13 +64,13 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->groups = false;
         $this->readonly = false;
 
-        $this->handle = fopen($this->file, 'a');
+        $this->handle = fopen(OpenchangeConfig::$logLocation, 'a');
         $this->debug_msg( "\nStarting the constructor\n");
-        $this->debug_msg("ID: " . $id . " | Path: " . $pathDB . " | profileName: " . $username . "\n");
+        $this->debug_msg("ID: " . $id . " | profileName: " . $username . "\n");
 
         //Creating the OC binding
         /* TODO: Defensive code here */
-        $this->mapi = new MAPIProfileDB($pathDB);
+        $this->mapi = new MAPIProfileDB(OpenchangeConfig::$profileLocation);
         $this->debug_msg( "1: Path => " . $this->mapi->path() . " | ");
         $this->mapiProfile = $this->mapi->getProfile($username);
         $this->debug_msg( "2: Name => " . $username . " | ");
@@ -111,7 +106,7 @@ class OpenchangeAddressbook extends rcube_addressbook
 
     private function debug_msg($string)
     {
-        if ($this->debug) {
+        if (OpenchangeConfig::$debugEnabled) {
             fwrite($this->handle, $string);
         }
     }

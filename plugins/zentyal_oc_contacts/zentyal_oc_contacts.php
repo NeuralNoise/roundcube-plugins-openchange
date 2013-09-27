@@ -79,10 +79,9 @@
 
         function get_address_book($args)
         {
-            $pathDB = $this->rc->config->get('ocLogin_DB_path', "/etc/openchange/profiles/profiles.ldb");
             $username = $_SESSION['username'];
 
-            $args['instance'] = new OpenchangeAddressbook($args['id'], $pathDB, $username);
+            $args['instance'] = new OpenchangeAddressbook($args['id'], $username);
 
             return $args;
         }

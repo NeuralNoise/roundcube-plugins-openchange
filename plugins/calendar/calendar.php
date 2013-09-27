@@ -47,7 +47,6 @@ class calendar extends rcube_plugin
   public $ical;
   public $ui;
 
-  private $pathDB;
   private $username;
 
   public $defaults = array(
@@ -196,7 +195,7 @@ class calendar extends rcube_plugin
       case "kolab":
         $this->require_plugin('libkolab');
       default:
-        $this->driver = new $driver_class($this, $this->pathDB, $this->username);
+        $this->driver = new $driver_class($this, $this->username);
         break;
      }
 

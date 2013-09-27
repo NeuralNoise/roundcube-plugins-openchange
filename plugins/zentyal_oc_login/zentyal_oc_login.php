@@ -1,4 +1,5 @@
 <?php
+require_once(dirname(__FILE__) . '/../OpenchangeConfig.php');
 
 class zentyal_oc_login extends rcube_plugin
 {
@@ -9,19 +10,17 @@ class zentyal_oc_login extends rcube_plugin
     private $port = 389;
 
     private $handle;
-    private $debug = true;
-    private $file = '/var/log/roundcube/my_debug.txt';
 
     private function debug_msg($string)
     {
-        if ($this->debug) {
+        if (OpenchangeConfig::$debugEnabled) {
             fwrite($this->handle, $string);
         }
     }
 
     function init()
     {
-        $this->handle = fopen($this->file, 'a');
+        $this->handle = fopen(OpenchangeConfig::$logLocation, 'a');
         $this->rc = rcmail::get_instance();
         $this->load_config();
 
@@ -74,7 +73,7 @@ class zentyal_oc_login extends rcube_plugin
         $password = get_input_value('_pass', RCUBE_INPUT_POST);
 
         $profileName = get_input_value('_user', RCUBE_INPUT_POST);
-        $pathDB = $this->rc->config->get('ocLogin_DB_path', "/etc/openchange/profiles/profiles.ldb");
+        $pathDB = OpenchangeConfig::$profileLocation;
 
         $server = $this->rc->config->get('ocLogin_server', 'localhost');
 
