@@ -1,0 +1,13 @@
+Source: roundcube
+Section: web
+Priority: extra
+Maintainer: Zentyal Packaging Maintainers <pkg-team@zentyal.com>
+Build-Depends: cdbs, debhelper (>= 5)
+Standards-Version: 3.9.2
+
+Package: roundcube-plugins-openchange
+Architecture: all
+Depends: roundcube-core (>= 0.9.3), ${misc:Depends}
+Description: roundcube plugins for OpenChange
+ This package provides several plugins for Roundcube. They should be
+ enabled in the configuration of Roundcube.
