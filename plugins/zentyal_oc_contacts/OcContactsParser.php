@@ -322,5 +322,10 @@ class OcContactsParser
 
         return $photo;
     }
+
+    public static function parsePhotoRc2Oc($decodedPhoto)
+    {
+        return array(PidTagAttachDataBinary, base64_encode($decodePhoto));
+    }
 }
 ?>

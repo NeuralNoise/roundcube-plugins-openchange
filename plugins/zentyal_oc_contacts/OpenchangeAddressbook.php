@@ -319,6 +319,14 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         }
 
+        /* When the attachments could be set */
+        /*
+        if (array_key_exists('photo') && $save_cols['photo']) {
+            $photoProperties = OcContactsParser::parsePhotoRc2Oc($save_cols['photo']);
+            $properties = array_merge($properties, $photoProperties);
+        }
+        */
+
         $ocContact = $this->ocContacts->openMessage($id, 1);
         $setResult = OcContactsParser::setProperties($ocContact, $properties);
         $ocContact->save();
