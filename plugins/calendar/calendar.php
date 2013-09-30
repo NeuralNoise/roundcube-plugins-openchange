@@ -24,7 +24,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once(dirname(__FILE__) . '/../OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeConfig.php');
 
 class calendar extends rcube_plugin
 {

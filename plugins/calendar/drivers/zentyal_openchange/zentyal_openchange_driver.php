@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once(dirname(__FILE__) . '/../../../OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../../../zentyal_lib/OpenchangeConfig.php');
 require_once(dirname(__FILE__) . '/../../lib/OCParsing.php');
 
 class zentyal_openchange_driver extends calendar_driver

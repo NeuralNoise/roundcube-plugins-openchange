@@ -1,5 +1,5 @@
 <?php
-require_once(dirname(__FILE__) . '/../OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeConfig.php');
 
 class zentyal_oc_login extends rcube_plugin
 {

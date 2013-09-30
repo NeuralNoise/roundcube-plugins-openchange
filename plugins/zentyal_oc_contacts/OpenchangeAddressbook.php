@@ -1,6 +1,6 @@
 <?php
 
-require_once(dirname(__FILE__) . '/../OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeConfig.php');
 require_once(dirname(__FILE__) . '/OcContactsParser.php');
 
 class OpenchangeAddressbook extends rcube_addressbook
