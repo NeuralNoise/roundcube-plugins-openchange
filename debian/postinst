@@ -1,5 +1,5 @@
 #!/bin/bash
 
-chown root:www-data /etc/roundcube/profiles
-chmod 660 /etc/roundcube/profiles
+chown root:www-data /etc/roundcube/data
+chmod 770 /etc/roundcube/data
 
