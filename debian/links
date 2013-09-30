@@ -3,4 +3,4 @@ usr/share/roundcube/plugins/libcalendaring var/lib/roundcube/plugins/libcalendar
 usr/share/roundcube/plugins/tasklist var/lib/roundcube/plugins/tasklist
 usr/share/roundcube/plugins/zentyal_oc_contacts var/lib/roundcube/plugins/zentyal_oc_contacts
 usr/share/roundcube/plugins/zentyal_oc_login var/lib/roundcube/plugins/zentyal_oc_login
-usr/share/roundcube/plugins/OpenchangeConfig.php var/lib/roundcube/plugins/OpenchangeConfig.php
+usr/share/roundcube/plugins/zentyal_lib var/lib/roundcube/plugins/zentyal_lib

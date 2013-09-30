@@ -3,4 +3,4 @@ plugins/libcalendaring usr/share/roundcube/plugins
 plugins/tasklist usr/share/roundcube/plugins
 plugins/zentyal_oc_contacts usr/share/roundcube/plugins
 plugins/zentyal_oc_login usr/share/roundcube/plugins
-plugins/OpenchangeConfig.php usr/share/roundcube/plugins
+plugins/zentyal_lib usr/share/roundcube/plugins
