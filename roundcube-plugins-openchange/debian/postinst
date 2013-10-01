@@ -1,5 +1,5 @@
 #!/bin/bash
 
-chown root:www-data /etc/roundcube/data
-chmod 770 /etc/roundcube/data
+chown root:www-data /var/lib/roundcube/data
+chmod 770 /var/lib/roundcube/data
 

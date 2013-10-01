@@ -1,3 +1,9 @@
+roundcube-plugins-openchange (0.1.7) precise; urgency=low
+
+  * Fixed roundcube data path
+
+ -- José A. Calvo <jacalvo@zentyal.com>  Tue, 01 Oct 2013 17:51:11 +0200
+
 roundcube-plugins-openchange (0.1.6) precise; urgency=low
 
   * Added php5-ldap depend
