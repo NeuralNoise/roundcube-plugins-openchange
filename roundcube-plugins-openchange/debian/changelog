@@ -1,3 +1,9 @@
+roundcube-plugins-openchange (0.1.8) precise; urgency=low
+
+  * Fixed reverse resolution
+
+ -- José A. Calvo <jacalvo@zentyal.com>  Wed, 02 Oct 2013 00:00:50 +0200
+
 roundcube-plugins-openchange (0.1.7) precise; urgency=low
 
   * Fixed roundcube data path

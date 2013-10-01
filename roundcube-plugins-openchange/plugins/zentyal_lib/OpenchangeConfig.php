@@ -6,7 +6,7 @@ class OpenchangeConfig
     public static $logLocation = "/var/log/roundcube/roundcube-openchange";
     public static $debugEnabled = false;
 
-    public static $openchangeServerIP = "localhost";
+    public static $openchangeServerIP = "127.0.1.1";
     public static $openchangeServerDomain = "zentyal-domain.lan";
 }
 ?>
