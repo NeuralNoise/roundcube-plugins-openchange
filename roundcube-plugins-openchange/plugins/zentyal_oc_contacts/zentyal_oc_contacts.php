@@ -49,9 +49,9 @@
 
         function get_all_addressbooks($args)
         {
-            $args['sources']['test'] = array(
-                    'id' => 'test',
-                    'name' => 'Testing AB',
+            $args['sources']['openchange'] = array(
+                    'id' => 'openchange',
+                    'name' => 'Contacts',
                     'readonly' => false,
             );
 

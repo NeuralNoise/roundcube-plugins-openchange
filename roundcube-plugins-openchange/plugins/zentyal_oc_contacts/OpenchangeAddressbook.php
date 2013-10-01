@@ -214,7 +214,7 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->debug_msg( "\nStarting search\n");
 
         /* Compose from Contacts screen  or after contact creation*/
-        if ($fields == $this->primary_key || $fields == 'test') {
+        if ($fields == $this->primary_key || $fields == 'openchange') {
             if (!is_array($value))
                 $value = array($value);
 
