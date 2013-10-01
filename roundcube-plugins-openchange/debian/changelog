@@ -1,3 +1,9 @@
+roundcube-plugins-openchange (0.1.5) precise; urgency=low
+
+  * Depend on php5-openchange instead of php5-mapi
+
+ -- José A. Calvo <jacalvo@zentyal.com>  Tue, 01 Oct 2013 10:52:15 +0200
+
 roundcube-plugins-openchange (0.1.4) precise; urgency=low
 
   * Minor changes in paths/permissions
