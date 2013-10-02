@@ -1,3 +1,9 @@
+roundcube-plugins-openchange (0.1.9) precise; urgency=low
+
+  * Change profile path to /etc
+
+ -- José A. Calvo <jacalvo@zentyal.com>  Wed, 02 Oct 2013 10:54:56 +0200
+
 roundcube-plugins-openchange (0.1.8) precise; urgency=low
 
   * Fixed reverse resolution
