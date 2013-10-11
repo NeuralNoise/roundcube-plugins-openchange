@@ -1,9 +1,13 @@
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ROUNDCUBE_DIR="/usr/share/roundcube/"
+ROUNDCUBE_DIR="/usr/share/roundcubemail/"
 DIRS=(
-    "plugins/zentyal_oc_folders"
-    "skins/zentyal"
+    "plugins/calendar"
+    "plugins/libcalendaring"
+    "plugins/tasklist"
+    "plugins/zentyal_lib"
+    "plugins/zentyal_oc_contacts"
+    "plugins/zentyal_oc_login"
 )
 
 for dir in "${DIRS[@]}"
