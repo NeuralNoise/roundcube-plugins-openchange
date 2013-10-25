@@ -32,36 +32,6 @@ class zentyal_oc_login extends rcube_plugin
         //to perform a logout it's only needed a GET request to /?_task=logout
     }
 
-    /* Deprecated */
-    function authenticate($args)
-    {
-        $this->debug_msg("Starting the authenticate function\n");
-
-        $args['user'] = get_input_value('_user', RCUBE_INPUT_POST);
-        $args['pass'] = get_input_value('_pass', RCUBE_INPUT_POST);
-        $args['cookiecheck'] = false; //do not check the cookie consistencie
-        $args['valid'] = true; //do not CSRF check
-
-        $bindingSuccessful = false;
-
-        $ldap_conn = ldap_connect($this->server);
-
-        if ($ldap_conn) {
-            ldap_set_option($ldap_conn, LDAP_OPT_PROTOCOL_VERSION, 3);
-
-            $bindingSuccessful = ldap_bind($ldap_conn, $user, $pass);
-        }
-
-        if ($bindingSuccessful) {
-            $this->debug_msg("Ldap bind was correct\n");
-        }
-
-        $args['user'] = $bindingSuccessful ? $args['user'] : "";
-
-        return $args;
-    }
-
-    // jkerihuel@zempresa2.example.com
     function checkMapiProfile($args)
     {
         $this->debug_msg("Starting the checkMapiProfile function\n");
