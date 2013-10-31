@@ -1,6 +1,8 @@
 <?php
 
 require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/MapiSessionHandler.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeDebug.php');
 require_once(dirname(__FILE__) . '/OcContactsParser.php');
 
 class OpenchangeAddressbook extends rcube_addressbook
@@ -24,13 +26,9 @@ class OpenchangeAddressbook extends rcube_addressbook
     private $name;
     private $contacts;
 
-    private $handle;
+    private $debug;
 
-    private $ocContacts;
-    private $mailbox;
-    private $session;
-    private $mapiProfile;
-    private $mapi;
+    private $mapiSession;
 
     /**
      * This variable sets which fields can be shown or set while editing
@@ -38,21 +36,6 @@ class OpenchangeAddressbook extends rcube_addressbook
     public $coltypes = array('name', 'firstname', 'surname', 'middlename', 'prefix', 'suffix', 'nickname',
             'jobtitle', 'organization', 'department', 'email', 'phone', 'address',
             'website', 'im', 'notes', 'photo');
-
-    /**
-     * Default destructor
-     */
-    public function __destruct()
-    {
-        $this->debug_msg( "\nStarting the destructor\n");
-        unset($this->ocContacts);
-        unset($this->mailbox);
-        unset($this->session);
-        unset($this->mapiProfile);
-        unset($this->mapi);
-        $this->debug_msg( "\nExiting the destructor\n");
-        fclose($this->handle);
-    }
 
     public function __construct($id, $username)
     {
@@ -64,32 +47,21 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->groups = false;
         $this->readonly = false;
 
-        $this->handle = fopen(OpenchangeConfig::$logLocation, 'a');
-        $this->debug_msg( "\nStarting the constructor\n");
-        $this->debug_msg("ID: " . $id . " | profileName: " . $username . "\n");
+        $this->debug = new OpenchangeDebug();
+        $this->debug->writeMessage( "\nStarting the constructor\n");
+        $this->debug->writeMessage("ID: " . $id . " | profileName: " . $username . "\n");
 
         //Creating the OC binding
-        /* TODO: Defensive code here */
-        $this->mapi = new MAPIProfileDB(OpenchangeConfig::$profileLocation);
-        $this->debug_msg( "1: Path => " . $this->mapi->path() . " | ");
-        $this->mapiProfile = $this->mapi->getProfile($username);
-        $this->debug_msg( "2: Name => " . $username . " | ");
-        $this->session = $this->mapiProfile->logon();
-        $this->debug_msg( "3");
-        $this->mailbox = $this->session->mailbox();
-        $this->debug_msg( "4: Mailbox name => " . $this->mailbox->getName() . " | ");
-        $this->ocContacts = $this->mailbox->contacts();
-        $this->debug_msg( "5");
+        $this->mapiSession = new MapiSessionHandler($username, "contacts");
 
-        $this->debug_msg( "6");
+        // Fisrt contact fetching
         $this->contacts = array();
         $this->fetchOcContacts();
-        $this->debug_msg( "7");
     }
 
     private function fetchOcContacts()
     {
-        $contactsTable =  $this->ocContacts->getMessageTable();
+        $contactsTable =  $this->mapiSession->getFolder()->getMessageTable();
         $messages = $contactsTable->getMessages();
         foreach ($messages as $message) {
             $record = array();
@@ -101,50 +73,44 @@ class OpenchangeAddressbook extends rcube_addressbook
         }
         unset($message);
         unset($messages);
-        $this->debug_msg(" - The number of fetched contacts is: " . count($this->contacts) . " - ");
-    }
-
-    private function debug_msg($string)
-    {
-        if (OpenchangeConfig::$debugEnabled) {
-            fwrite($this->handle, $string);
-        }
+        unset($contactsTable);
+        $this->debug->writeMessage(" - The number of fetched contacts is: " . count($this->contacts) . " - ");
     }
 
     public function get_name()
     {
-        $this->debug_msg( "\nStarting get_name\n");
+        $this->debug->writeMessage( "\nStarting get_name\n");
         return $this->name;
     }
 
     public function set_search_set($filter)
     {
-        $this->debug_msg( "\nStarting set_search_set\n");
+        $this->debug->writeMessage( "\nStarting set_search_set\n");
         $this->filter = $filter;
     }
 
     public function get_search_set()
     {
-        $this->debug_msg( "\nStarting get_search_set\n");
+        $this->debug->writeMessage( "\nStarting get_search_set\n");
         return $this->filter;
     }
 
     public function set_group($gid)
     {
-        $this->debug_msg( "\nStarting set_group\n");
+        $this->debug->writeMessage( "\nStarting set_group\n");
         $this->group_id = $gid;
     }
 
     public function reset()
     {
-        $this->debug_msg( "\nStarting reset\n");
+        $this->debug->writeMessage( "\nStarting reset\n");
         $this->result = null;
         $this->filter = null;
     }
 
     function list_groups($search = null)
     {
-        $this->debug_msg( "\nStarting list_groups\n");
+        $this->debug->writeMessage( "\nStarting list_groups\n");
         return array(
                 //array('ID' => 'testgroup1', 'name' => "Testgroup"),
                 );
@@ -160,13 +126,13 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public function list_records($cols=null, $subset=0, $nocount=false)
     {
-        $this->debug_msg( "\nStarting list_records\n");
-        $this->debug_msg( "cols: " . serialize($cols) . "\n");
-        $this->debug_msg( "subset: " . $subset . "\n");
-        $this->debug_msg( "nocount: " . $nocount. "\n");
-        $this->debug_msg( "filter: " . $this->filter. "\n");
-        $this->debug_msg( "page_size: " . $this->page_size . "\n");
-        $this->debug_msg( "contacts count: " . count($this->contacts) . "\n");
+        $this->debug->writeMessage( "\nStarting list_records\n");
+        $this->debug->writeMessage( "cols: " . serialize($cols) . "\n");
+        $this->debug->writeMessage( "subset: " . $subset . "\n");
+        $this->debug->writeMessage( "nocount: " . $nocount. "\n");
+        $this->debug->writeMessage( "filter: " . $this->filter. "\n");
+        $this->debug->writeMessage( "page_size: " . $this->page_size . "\n");
+        $this->debug->writeMessage( "contacts count: " . count($this->contacts) . "\n");
 
         if ($nocount || $this->list_page <= 1) {
             $this->result = new rcube_result_set();
@@ -192,12 +158,12 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         $i = $start_pos;
 
-        $this->debug_msg( "start: " . $start_pos . " | length: " . $length . "\n");
+        $this->debug->writeMessage( "start: " . $start_pos . " | length: " . $length . "\n");
         while ($i < $start_pos + $length){
             $contact = OcContactsParser::simpleOcContact2Rc($this->contacts[$i]);
             $this->result->add($contact);
-            $this->debug_msg( $i . " - Adding to the result:" . $contact["email"]);
-            $this->debug_msg( " | " . $contact["ID"] . "\n");
+            $this->debug->writeMessage( $i . " - Adding to the result:" . $contact["email"]);
+            $this->debug->writeMessage( " | " . $contact["ID"] . "\n");
 
             $i++;
         }
@@ -211,7 +177,7 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public function search($fields, $value, $strict=false, $select=true, $nocount=false, $required=array())
     {
-        $this->debug_msg( "\nStarting search\n");
+        $this->debug->writeMessage( "\nStarting search\n");
 
         /* Compose from Contacts screen  or after contact creation*/
         if ($fields == $this->primary_key || $fields == 'openchange') {
@@ -238,16 +204,16 @@ class OpenchangeAddressbook extends rcube_addressbook
 
     public function count($size = 0)
     {
-        $this->debug_msg( "\nStarting count\n");
-        $this->debug_msg( "Size: " . $size . "\n");
-        $this->debug_msg( "First: " . ($this->list_page-1) * $this->page_size . "\n");
+        $this->debug->writeMessage( "\nStarting count\n");
+        $this->debug->writeMessage( "Size: " . $size . "\n");
+        $this->debug->writeMessage( "First: " . ($this->list_page-1) * $this->page_size . "\n");
         $size = ($size == 0) ? $size : count($this->contacts);
         return new rcube_result_set($size, ($this->list_page-1) * $this->page_size);
     }
 
     public function get_result()
     {
-        $this->debug_msg( "\nStarting get_result\n");
+        $this->debug->writeMessage( "\nStarting get_result\n");
         return $this->result;
     }
 
@@ -258,8 +224,8 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     public function get_record($id, $assoc=false)
     {
-        $this->debug_msg( "\nStarting get_record id = " . $id . " | assoc = " .$assoc);
-        $this->debug_msg( " | Single id = " . OcContactsParser::getContactId($id, "_") ."\n");
+        $this->debug->writeMessage( "\nStarting get_record id = " . $id . " | assoc = " .$assoc);
+        $this->debug->writeMessage( " | Single id = " . OcContactsParser::getContactId($id, "_") ."\n");
 
         foreach ($this->contacts as $record) {
             $recordId = str_replace('/','_',$record['id']);
@@ -280,7 +246,7 @@ class OpenchangeAddressbook extends rcube_addressbook
     {
         $contact = array();
 
-        $ocContact = $this->ocContacts->openMessage($id);
+        $ocContact = $this->mapiSession->getFolder()->openMessage($id);
 
         $propsToGet = OcContactsParser::$full_contact_properties;
         $properties = OcContactsParser::getProperties($ocContact, $propsToGet);
@@ -290,7 +256,7 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         unset($ocContact);
 
-        $this->debug_msg("The full contact is: \n" . serialize($contact) . "\n");
+        $this->debug->writeMessage("The full contact is: \n" . serialize($contact) . "\n");
 
         return $contact;
     }
@@ -304,16 +270,16 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     function update($id, $save_cols)
     {
-        $this->debug_msg( "\nStarting update id = " . $id . "\n");
+        $this->debug->writeMessage( "\nStarting update id = " . $id . "\n");
         $updated = false;
         $properties = array();
 
         foreach ($save_cols as $col => $value) {
             $property = OcContactsParser::parseRc2OcProp($col, $value);
-            $this->debug_msg("Col: " . $col . " | Value: ");
-            if (is_array($value)) $this->debug_msg(serialize($value));
-            else $this->debug_msg($value);
-            $this->debug_msg(" | Prop: " . $property . "\n");
+            $this->debug->writeMessage("Col: " . $col . " | Value: ");
+            if (is_array($value)) $this->debug->writeMessage(serialize($value));
+            else $this->debug->writeMessage($value);
+            $this->debug->writeMessage(" | Prop: " . $property . "\n");
             $properties = array_merge($property, $properties);
 
         }
@@ -326,7 +292,7 @@ class OpenchangeAddressbook extends rcube_addressbook
         }
         */
 
-        $ocContact = $this->ocContacts->openMessage($id, 1);
+        $ocContact = $this->mapiSession->getFolder()->openMessage($id, 1);
         $setResult = OcContactsParser::setProperties($ocContact, $properties);
         $ocContact->save();
 
@@ -343,7 +309,7 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     function insert($save_data, $check=false)
     {
-        $this->debug_msg( "\nStarting insert id = " . $id . "\n");
+        $this->debug->writeMessage( "\nStarting insert id = " . $id . "\n");
         $updated = false;
         $properties = array();
 
@@ -354,14 +320,14 @@ class OpenchangeAddressbook extends rcube_addressbook
 
         foreach ($properties as $prop) {
             $rcubeProps = OcContactsParser::$oc2RcPropTranslation[979173407];
-            $this->debug_msg(serialize($rcubeProps) . "\n");
+            $this->debug->writeMessage(serialize($rcubeProps) . "\n");
             ob_start(); var_dump($prop);
-            $this->debug_msg(ob_get_clean());
+            $this->debug->writeMessage(ob_get_clean());
         }
 
-        $contact = OcContactsParser::createWithProperties($this->ocContacts, $properties);
+        $contact = OcContactsParser::createWithProperties($this->mapiSession->getFolder(), $properties);
         $id = $contact->getID();
-        $this->debug_msg( "\nEnding insert id = " . $id. "\n");
+        $this->debug->writeMessage( "\nEnding insert id = " . $id. "\n");
 
         return $id ? $id: $False;
 
@@ -375,15 +341,15 @@ class OpenchangeAddressbook extends rcube_addressbook
      */
     function delete($ids, $force=true)
     {
-        $this->debug_msg( "\nDeleting contacts\n");
-        OcContactsParser::deleteContacts($this->ocContacts, $ids);
+        $this->debug->writeMessage( "\nDeleting contacts\n");
+        OcContactsParser::deleteContacts($this->mapiSession->getFolder(), $ids);
 
         return true;
     }
 
     function create_group($name)
     {
-        $this->debug_msg( "\nStarting create_group\n");
+        $this->debug->writeMessage( "\nStarting create_group\n");
         $result = false;
 
         return $result;
@@ -391,25 +357,25 @@ class OpenchangeAddressbook extends rcube_addressbook
 
     function delete_group($gid)
     {
-        $this->debug_msg( "\nStarting delete_group\n");
+        $this->debug->writeMessage( "\nStarting delete_group\n");
         return false;
     }
 
     function rename_group($gid, $newname)
     {
-        $this->debug_msg( "\nStarting rename_group\n");
+        $this->debug->writeMessage( "\nStarting rename_group\n");
         return $newname;
     }
 
     function add_to_group($group_id, $ids)
     {
-        $this->debug_msg( "\nStarting add_to_group\n");
+        $this->debug->writeMessage( "\nStarting add_to_group\n");
         return false;
     }
 
     function remove_from_group($group_id, $ids)
     {
-        $this->debug_msg( "\nStarting remove_from_group\n");
+        $this->debug->writeMessage( "\nStarting remove_from_group\n");
         return false;
     }
 }
