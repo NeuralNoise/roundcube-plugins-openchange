@@ -23,6 +23,8 @@
  */
 
 require_once(dirname(__FILE__) . '/../../../zentyal_lib/OpenchangeConfig.php');
+require_once(dirname(__FILE__) . '/../../../zentyal_lib/MapiSessionHandler.php');
+require_once(dirname(__FILE__) . '/../../../zentyal_lib/OpenchangeDebug.php');
 require_once(dirname(__FILE__) . '/../../lib/OCParsing.php');
 
 class zentyal_openchange_driver extends calendar_driver
@@ -50,31 +52,11 @@ class zentyal_openchange_driver extends calendar_driver
 
     private $handle;
 
-    private $ocCalendar;
-    private $mailbox;
-    private $session;
-    private $mapiProfile;
-    private $mapi;
+    private $mapiSession;
     private $username;
 
     private $events = array();
     private $createdEventId = false;
-
-    /**
-     * Default destructor
-     */
-    public function __destruct()
-    {
-        $this->debug_msg("\nError => Starting the destructor\n");
-        $this->debug_msg("Destructing MAPI objects\n");
-        unset($this->ocCalendar);
-        unset($this->mailbox);
-        unset($this->session);
-        unset($this->mapiProfile);
-        unset($this->mapi);
-        $this->debug_msg("\nError => Exiting the destructor\n");
-        fclose($this->handle);
-    }
 
     /**
      * Default constructor
@@ -89,11 +71,8 @@ class zentyal_openchange_driver extends calendar_driver
         $this->debug_msg("Profile name: " . $profileName . "\n");
 
         $this->username = $profileName;
-        $this->mapi = new MAPIProfileDB(OpenchangeConfig::$profileLocation);
-        $this->mapiProfile = $this->mapi->getProfile($profileName);
-        $this->session = $this->mapiProfile->logon();
-        $this->mailbox = $this->session->mailbox();
-        $this->ocCalendar = $this->mailbox->calendar();
+
+        $this->mapiSession = new MapiSessionHandler($profileName, "calendars");
 
         $this->cal = $cal;
         $this->rc = $cal->rc;
@@ -111,17 +90,18 @@ class zentyal_openchange_driver extends calendar_driver
     private function fetchEvents()
     {
         $this->debug_msg("\nStarting FetchEvents\n");
-        $table = $this->ocCalendar->getMessageTable();
+        $table = $this->mapiSession->getFolder()->getMessageTable();
         $messages = $table->getMessages();
 
         $this->debug_msg("The number of events in the table is: " . count($messages) . "\n");
 
         foreach ($messages as $message) {
-            $record = OCParsing::getFullEventProps($this->ocCalendar, $message);
+            $record = OCParsing::getFullEventProps($this->mapiSession->getFolder(), $message);
             array_push($this->events, $record);
             $this->debug_msg("\nShowing a event:\n");
             $this->debug_msg(serialize($record) . "\n\n");
         }
+        unset($table);
         unset($message);
         unset($messages);
         unset($table);
@@ -141,10 +121,10 @@ class zentyal_openchange_driver extends calendar_driver
     {
         $this->debug_msg("\nStarting _read_calendars\n");
 
-        $cal_id = $this->ocCalendar->getID();
+        $cal_id = $this->mapiSession->getFolder()->getID();
         $calendar['showalarms'] = false;
         $calendar['active'] = true;
-        $calendar['name'] = $this->ocCalendar->getName();
+        $calendar['name'] = $this->mapiSession->getFolder()->getName();
         $calendar['id'] = $cal_id;
         $calendar['calendar_id'] = $cal_id;
         $calendar['user_id'] = $this->rc->user->ID;
@@ -413,7 +393,7 @@ class zentyal_openchange_driver extends calendar_driver
             $this->debug_msg("The properties we set:\n");
             ob_start(); var_dump($properties);
             $this->debug_msg(ob_get_clean());
-            $newEevent = OCParsing::createWithProperties($this->ocCalendar, $properties);
+            $newEevent = OCParsing::createWithProperties($this->mapiSession->getFolder(), $properties);
 
             $event_id = $newEevent->getID();
             unset($newEevent);
@@ -443,7 +423,7 @@ class zentyal_openchange_driver extends calendar_driver
 
             $event = OCParsing::checkAllDayConsistency($event);
             $properties = OCParsing::parseRc2OcEvent($event);
-            $ocEvent = $this->ocCalendar->openMessage($old['id'], 1);
+            $ocEvent = $this->mapiSession->getFolder()->openMessage($old['id'], 1);
             $setResult = OcContactsParser::setProperties($ocEvent, $properties);
             $ocEvent->save();
 
@@ -555,7 +535,7 @@ class zentyal_openchange_driver extends calendar_driver
             $event += (array)$this->get_event($event);
 
             //At event["calendar"] there is the ID of the calendar, use?
-            $deletingResult = OCParsing::deleteEvents($this->ocCalendar, $event['id']);
+            $deletingResult = OCParsing::deleteEvents($this->mapiSession->getFolder(), $event['id']);
 
             return true;
         }
@@ -581,9 +561,9 @@ class zentyal_openchange_driver extends calendar_driver
         } else
             $id = is_array($event) ? ($event['id'] ? $event['id'] : $event['uid']) : $event;
 
-        $message = $this->ocCalendar->openMessage($id);
+        $message = $this->mapiSession->getFolder()->openMessage($id);
 
-        $event = OCParsing::getFullEventProps($this->ocCalendar, $message);
+        $event = OCParsing::getFullEventProps($this->mapiSession->getFolder(), $message);
         $event = OCParsing::parseEventOc2Rc($event);
 
         $this->debug_msg("\nEnding get_event\n");
