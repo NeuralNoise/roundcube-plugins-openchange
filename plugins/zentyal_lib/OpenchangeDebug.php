@@ -43,7 +43,7 @@ class OpenchangeDebug
      * or similar tools.
      *
      * @param   string  $message: The message that will be written to the log file
-     * @param   int     $identantion : (4spaces) * indentantion will be prefixed
+     * @param   int     $indentantion : (4spaces) * indentantion will be prefixed
      * @param   string  $keyword: The prefix keyword of the message
      *
      */
@@ -51,14 +51,13 @@ class OpenchangeDebug
     public function writeMessage($message, $indentation=0, $keyword="") {
         if (OpenchangeConfig::$debugEnabled && $this->handle) {
             $string = "";
-
             while ($indentation > 0) {
                 $string .= "    ";
-                $indentation --;
+                $indentation--;
             }
 
             if ($keyword)
-                $string = "[" . $keyword . "]: ";
+                $string .= "[" . $keyword . "]: ";
 
             $string .= $message;
 
