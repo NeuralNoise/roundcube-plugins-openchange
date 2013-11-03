@@ -3,6 +3,8 @@
 require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeConfig.php');
 require_once(dirname(__FILE__) . '/../zentyal_lib/MapiSessionHandler.php');
 require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeDebug.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/OpenchangeDebug.php');
+require_once(dirname(__FILE__) . '/../zentyal_lib/MapiObjectsCache.php');
 require_once(dirname(__FILE__) . '/OcContactsParser.php');
 
 class OpenchangeAddressbook extends rcube_addressbook
@@ -28,7 +30,7 @@ class OpenchangeAddressbook extends rcube_addressbook
 
     private $debug;
 
-    private $mapiSession;
+    private $mapiSession = false;
 
     /**
      * This variable sets which fields can be shown or set while editing
@@ -52,7 +54,21 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->debug->writeMessage("ID: " . $id . " | profileName: " . $username . "\n");
 
         //Creating the OC binding
-        $this->mapiSession = new MapiSessionHandler($username, "contacts");
+        if (OpenchangeConfig::$useCachedSessions) {
+            $this->debug->writeMessage("The cache before starting:\n" . MapiObjectsCache::cacheDump());
+            $this->mapiSession = MapiObjectsCache::get($username);
+            $this->debug->writeMessage("We have queried the " . $username . " mapi object.", 0, "CACHE");
+        }
+
+        if ($this->mapiSession === false) {
+            $this->mapiSession = new MapiSessionHandler($username, "contacts");
+            if (OpenchangeConfig::$useCachedSessions) {
+                MapiObjectsCache::add($username, $this->mapiSession);
+                $this->debug->writeMessage("We have added the " . $username . " mapi objects to the cache.", 0, "CACHE");
+                $this->debug->writeMessage("The cache after doing all the stuff:\n" . MapiObjectsCache::cacheDump());
+            }
+        }
+
 
         // Fisrt contact fetching
         $this->contacts = array();

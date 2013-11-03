@@ -8,5 +8,7 @@ class OpenchangeConfig
 
     public static $openchangeServerIP = "127.0.1.1";
     public static $openchangeServerDomain = "zentyal-domain.lan";
+
+    public static $useCachedSessions = false;
 }
 ?>
