@@ -65,5 +65,25 @@ class OpenchangeDebug
             fwrite($this->handle, $string);
         }
     }
+
+    /**
+     * Dump a variable content into the log file
+     *
+     * It will also add some header information (even with a custom message)
+     *
+     * @param   string  $var: The variable to dump
+     * @param   string  $message : A custom message to be added at the beginning
+     *
+     */
+
+    public function dumpVariable($var, $message="") {
+        ob_start();
+        var_dump($var);
+        $string = "[VARIABLE DUMP START]\n";
+        if ($message) $string .= $message . "\n";
+        $string .= ob_get_clean();
+        $string .= "[VARIABLE DUMP END]\n";
+        $this->writeMessage($string);
+    }
 }
 ?>
