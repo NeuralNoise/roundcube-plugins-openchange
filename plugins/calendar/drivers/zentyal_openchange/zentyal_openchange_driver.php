@@ -484,11 +484,16 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function move_event($event)
     {
-        $this->debug->writeMessage("\nStarting more_event\n");
-        ob_start();var_dump($event);
-        $this->debug->writeMessage(ob_get_clean() . "\n");
+        $this->debug->writeMessage("\nStarting move_event\n");
+
+        $oldEvent = $this->get_event($event);
+        $difference = date_diff($oldEvent['end'], $oldEvent['start']);
+        if ($difference->d == 0) {
+            $event["end"] = $event["start"];
+        }
+
         // let edit_event() do all the magic
-        return $this->edit_event($event + (array)$this->get_event($event));
+        return $this->edit_event($event);
     }
 
     /**
@@ -549,6 +554,7 @@ class zentyal_openchange_driver extends calendar_driver
 
         $message = $this->mapiSession->getFolder()->openMessage($id);
 
+        unset($event);
         $event = OCParsing::getFullEventProps($this->mapiSession->getFolder(), $message);
         $event = OCParsing::parseEventOc2Rc($event);
 
