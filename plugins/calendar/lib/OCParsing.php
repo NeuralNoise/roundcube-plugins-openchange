@@ -1,4 +1,6 @@
 <?php
+require_once(dirname(__FILE__) . '/../../zentyal_lib/OpenchangeDebug.php');
+
 class OCParsing
 {
     public static $fullEventProperties = array(
@@ -95,6 +97,24 @@ class OCParsing
         return $props;
     }
 
+    /*
+     * All-day event adjustment before saving "edit changes"
+     */
+    public static function checkAllDayConsistency($event)
+    {
+        if ($event['allday']){
+//            $hourEnd = intval($event['end']->format('H'));
+//            $hourStart = intval($event['start']->format('H'));
+//            $hourDiff = $hourEnd - $hourStart;
+
+//            $event['end']->sub(date_interval_create_from_date_string($hourDiff . ' hour'));
+            $event['start']->setTime(12, 0);
+            $event['end']->setTime(12, 0);
+        }
+
+        return $event;
+    }
+
     private static function parseKeyRc2Oc($rcField)
     {
         foreach (self::$eventTranslationTable as $ocProp => $rcProps) {
@@ -132,7 +152,7 @@ class OCParsing
             $result[$key] = $value;
         }
 
-        $result['end'] = self::correctAllDayEndDate($result);
+//        $result['end'] = self::correctAllDayEndDateOc2Rc($result);
 
         return $result;
     }
@@ -228,7 +248,7 @@ class OCParsing
         return $description;
     }
 
-    private static function correctAllDayEndDate($event)
+    private static function correctAllDayEndDateOc2Rc($event)
     {
         if ($event['allday']) {
             return $event['end']->sub(date_interval_create_from_date_string('1 day'));
@@ -251,19 +271,6 @@ class OCParsing
             return true;
         else
             return false;
-    }
-
-    public static function checkAllDayConsistency($event)
-    {
-         if ($event['allday']){
-            $hourEnd = intval($event['end']->format('H'));
-            $hourStart = intval($event['start']->format('H'));
-            $hourDiff = $hourEnd - $hourStart;
-
-            $event['end']->sub(date_interval_create_from_date_string($hourDiff . ' hour'));
-         }
-
-         return $event;
     }
 }
 ?>

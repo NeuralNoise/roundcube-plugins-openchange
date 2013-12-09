@@ -65,7 +65,7 @@ class zentyal_openchange_driver extends calendar_driver
     {
         $this->debug = new OpenchangeDebug();
 
-        $this->debug->writeMessage("\nError => Starting the contructor\n");
+        $this->debug->writeMessage("\nStarting the contructor\n");
 
         $this->username = $profileName;
         //Creating the OC binding
@@ -96,10 +96,7 @@ class zentyal_openchange_driver extends calendar_driver
         foreach ($messages as $message) {
             $record = OCParsing::getFullEventProps($this->mapiSession->getFolder(), $message);
             array_push($this->events, $record);
-            $this->debug->writeMessage("\nShowing a event:\n");
-            $this->debug->writeMessage(serialize($record) . "\n\n");
         }
-        unset($table);
         unset($message);
         unset($messages);
         unset($table);
@@ -382,8 +379,6 @@ class zentyal_openchange_driver extends calendar_driver
             $properties = OCParsing::parseRc2OcEvent($event);
 
             $this->debug->writeMessage("The properties we set:\n");
-            ob_start(); var_dump($properties);
-            $this->debug->writeMessage(ob_get_clean());
             $newEevent = OCParsing::createWithProperties($this->mapiSession->getFolder(), $properties);
 
             $event_id = $newEevent->getID();
@@ -489,11 +484,16 @@ class zentyal_openchange_driver extends calendar_driver
      */
     public function move_event($event)
     {
-        $this->debug->writeMessage("\nStarting more_event\n");
-        ob_start();var_dump($event);
-        $this->debug->writeMessage(ob_get_clean() . "\n");
+        $this->debug->writeMessage("\nStarting move_event\n");
+
+        $oldEvent = $this->get_event($event);
+        $difference = date_diff($oldEvent['end'], $oldEvent['start']);
+        if ($difference->d == 0) {
+            $event["end"] = $event["start"];
+        }
+
         // let edit_event() do all the magic
-        return $this->edit_event($event + (array)$this->get_event($event));
+        return $this->edit_event($event);
     }
 
     /**
@@ -554,6 +554,7 @@ class zentyal_openchange_driver extends calendar_driver
 
         $message = $this->mapiSession->getFolder()->openMessage($id);
 
+        unset($event);
         $event = OCParsing::getFullEventProps($this->mapiSession->getFolder(), $message);
         $event = OCParsing::parseEventOc2Rc($event);
 
@@ -588,10 +589,6 @@ class zentyal_openchange_driver extends calendar_driver
             array_push($events, $tempEvent);
         }
 
-        foreach ($events as $event) {
-            $this->debug->writeMessage("\nThe event id is: " . $event['id'] . "\n");
-            $this->debug->writeMessage(serialize($event) . "\n");
-        }
         $this->debug->writeMessage("Ending load_events\n");
 
         return $events;
