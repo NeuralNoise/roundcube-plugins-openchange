@@ -1,4 +1,6 @@
 <?php
+require_once(dirname(__FILE__) . '/../../zentyal_lib/OpenchangeDebug.php');
+
 class OCParsing
 {
     public static $fullEventProperties = array(

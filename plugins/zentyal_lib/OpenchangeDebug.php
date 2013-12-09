@@ -85,5 +85,33 @@ class OpenchangeDebug
         $string .= "[VARIABLE DUMP END]\n";
         $this->writeMessage($string);
     }
+
+    // The date output format
+    private $dateFormat = "Y-m-d H:i:s - T";
+
+    /**
+     *  Convert a timestamp into a DateTime and returns it
+     *
+     *  @param   integer $timestamp: The unix timestamp
+     *
+     */
+    public function getStringFromTimestamp($timestamp)
+    {
+        $date = new DateTime();
+        $date->setTimestamp($timestamp);
+
+        return $date->format($this->dateFormat);
+    }
+
+    /**
+     *  Returns the string of the given DateTime object using $dateFormat
+     *
+     * @param   DateTime $date: The date we want to convert to string
+     *
+     */
+    public function getFormatedDateString($date)
+    {
+        return $date->format($this->dateFormat);
+    }
 }
 ?>
