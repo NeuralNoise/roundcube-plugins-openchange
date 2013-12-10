@@ -145,7 +145,7 @@ class tasklist extends rcube_plugin
         case "kolab":
             $this->require_plugin('libkolab');
         default:
-            $this->driver = new $driver_class($this);
+            $this->driver = new $driver_class($this, $_SESSION['username']);
             break;
         }
 
