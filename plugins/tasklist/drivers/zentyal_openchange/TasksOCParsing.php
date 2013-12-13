@@ -164,6 +164,9 @@ class TasksOCParsing
     {
         $props = array();
 
+        $task = self::prepareDateForParsingRc2Oc($task, 'startdate', 'starttime');
+        $task = self::prepareDateForParsingRc2Oc($task, 'date', 'time');
+
         foreach ($task as $field => $value) {
             $ocProp = self::parseKeyRc2Oc($field);
             if ($ocProp) {
@@ -201,6 +204,35 @@ class TasksOCParsing
         }
 
         return False;
+    }
+
+    private static function prepareDateForParsingRc2Oc($task, $date, $time)
+    {
+        $debug = new OpenchangeDebug();
+
+        if (isset($task[$date]) && $task[$date]){
+            $debug->writeMessage($task[$date], 1, "DATE");
+            $debug->writeMessage($task[$time], 1, "TIME");
+
+            $newDate = new DateTime(NULL, $task['_timezone']);
+
+            $explodedDate = explode('-', $task[$date]);
+            $newDate->setDate($explodedDate[0], $explodedDate[1], $explodedDate[2]);
+
+            if (isset($task[$time])) {
+                $explodedTime = explode(':', $task[$time]);
+                $newDate->setTime($explodedTime[0], $explodedTime[1]);
+            } else
+                $newDate->setTime(0,0);
+
+            $task[$date] = $newDate;
+
+            $debug->dumpVariable($task[$date], "The date from the task");
+        } else
+            unset($task[$date]);
+
+
+        return $task;
     }
 
 
