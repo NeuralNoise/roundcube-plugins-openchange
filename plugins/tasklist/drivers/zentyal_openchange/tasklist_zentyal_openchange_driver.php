@@ -408,6 +408,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
 
         $task['flagged'] = false;
 
+        $task['_timezone'] = $this->plugin->timezone;
         $properties = TasksOCParsing::parseRc2OcTask($task);
         $this->debug->dumpVariable($properties, "The properties we parse");
 
@@ -433,46 +434,31 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
      * @return boolean True on success, False on error
      * @see tasklist_driver::edit_task()
      */
-    public function edit_task($prop)
+    public function edit_task($task)
     {
         $this->debug->writeMessage("\nStarting edit_task");
 
-        $sql_set = array();
-        foreach (array('title', 'description', 'flagged', 'complete') as $col) {
-            if (isset($prop[$col]))
-                $sql_set[] = $this->rc->db->quote_identifier($col) . '=' . $this->rc->db->quote($prop[$col]);
-        }
-        foreach (array('parent_id', 'date', 'time', 'startdate', 'starttime', 'alarms') as $col) {
-            if (isset($prop[$col]))
-                $sql_set[] = $this->rc->db->quote_identifier($col) . '=' . (empty($prop[$col]) ? 'NULL' : $this->rc->db->quote($prop[$col]));
-        }
-        if (isset($prop['tags']))
-            $sql_set[] = $this->rc->db->quote_identifier('tags') . '=' . $this->rc->db->quote(join(',', (array)$prop['tags']));
+        //Our OC server will manage the last update timestamp
+        unset($task['changed']);
 
-        if (isset($prop['date']) || isset($prop['time']) || isset($prop['alarms'])) {
-            $notify_at = $this->_get_notification($prop);
-            $sql_set[] = $this->rc->db->quote_identifier('notify') . '=' . (empty($notify_at) ? 'NULL' : $this->rc->db->quote($notify_at));
+        $task['_timezone'] = $this->plugin->timezone;
+        //$this->debug->dumpVariable($task, "the parameter 'task'");
+        $properties = TasksOCParsing::parseRc2OcTask($task);
+        $ocTask = $this->mapiSession->getFolder()->openMessage($task['id'], 1);
+        //$this->debug->dumpVariable($properties, "the properties we want to update");
+        $setResult = TasksOCParsing::setProperties($ocTask, $properties);
+        $ocTask->save();
+
+        if (isset($task['date']) || isset($task['time']) || isset($task['alarms'])) {
+            //update notifications
         }
 
         // moved from another list
-        if ($prop['_fromlist'] && ($newlist = $prop['list'])) {
-            $sql_set[] = 'tasklist_id=' . $this->rc->db->quote($newlist);
+        if ($task['_fromlist'] && ($newlist = $task['list'])) {
+            //we still don't manage multiple lists
         }
 
-/*        $query = $this->rc->db->query(sprintf(
-            "UPDATE " . $this->db_tasks . "
-             SET   changed=%s %s
-             WHERE task_id=?
-             AND   tasklist_id IN (%s)",
-            $this->rc->db->now(),
-            ($sql_set ? ', ' . join(', ', $sql_set) : ''),
-            $this->list_ids
-          ),
-          $prop['id']
-        );
-*/
-
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
