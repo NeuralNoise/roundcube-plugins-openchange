@@ -165,6 +165,15 @@ class TasksOCParsing
         return $setResult;
     }
 
+    public static function deleteTasks($calendar, $tasksIds)
+    {
+        if (!is_array($tasksIds))
+            $tasksIds = array($tasksIds);
+
+        return call_user_func_array(array($calendar, 'deleteMessages'), $tasksIds);
+    }
+
+
     public static function parseRc2OcTask($task)
     {
         $props = array();

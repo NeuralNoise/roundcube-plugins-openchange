@@ -485,32 +485,11 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     {
         $this->debug->writeMessage("\nStarting delete_task");
 
-        $task_id = $prop['id'];
+        $taskId = $prop['id'];
 
-        if ($task_id && $force) {
-/*            $query = $this->rc->db->query(
-                "DELETE FROM " . $this->db_tasks . "
-                 WHERE task_id=?
-                 AND tasklist_id IN (" . $this->list_ids . ")",
-                $task_id
-            );
-*/
-        }
-        else if ($task_id) {
- /*           $query = $this->rc->db->query(sprintf(
-                "UPDATE " . $this->db_tasks . "
-                 SET   changed=%s, del=1
-                 WHERE task_id=?
-                 AND   tasklist_id IN (%s)",
-                $this->rc->db->now(),
-                $this->list_ids
-              ),
-              $task_id
-            );
-*/
-        }
+        $deletingResult = TasksOCParsing::deleteTasks($this->mapiSession->getFolder(), $taskId);
 
-        return $this->rc->db->affected_rows($query);
+        return true;
     }
 
     /**
@@ -524,19 +503,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     {
         $this->debug->writeMessage("\nStarting undelete_task");
 
-/*        $query = $this->rc->db->query(sprintf(
-            "UPDATE " . $this->db_tasks . "
-             SET   changed=%s, del=0
-             WHERE task_id=?
-             AND   tasklist_id IN (%s)",
-            $this->rc->db->now(),
-            $this->list_ids
-          ),
-          $prop['id']
-        );
-*/
-
-        return $this->rc->db->affected_rows($query);
+        return false;
     }
 
     /**
