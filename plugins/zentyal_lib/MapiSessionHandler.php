@@ -31,6 +31,7 @@ class MapiSessionHandler
     private $bindingsFunctions = array(
         'contacts'  => 'contacts',
         'calendars' => 'calendar',
+        'tasks'     => 'tasks',
     );
 
     /**
