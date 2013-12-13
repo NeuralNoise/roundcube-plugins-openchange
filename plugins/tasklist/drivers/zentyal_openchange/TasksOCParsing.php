@@ -26,51 +26,42 @@ condition whenever the PidLidTaskOrdinal property of any Task object in the fold
 way that would violate the condition.
 */
 
-/*
-We might have also to set PidLidCommonStart PropertyPidLidCommonEnd properties as we set (start/due date
-*/
-
 require_once(dirname(__FILE__) . '/../../../zentyal_lib/OpenchangeDebug.php');
 
 class TasksOCParsing
 {
     public static $taskProperties = array(
-        PidTagSubject, PidTagNormalizedSubject,
+        PidTagNormalizedSubject,
         PidTagLastModificationTime,
-        PidTagSensitivity,
-        PidTagBody, PidTagPriority,
+        PidTagBody,
         PidLidTaskStartDate, PidLidCommonStart,
+        PidLidTaskComplete,
         PidLidTaskDueDate, PidLidCommonEnd,
-        PidLidTaskState,
-        PidLidTaskStatus,
-        PidLidTaskComplete, PidLidTaskStatusOnComplete,
-        PidLidTaskLastUpdate,
+        PidTagSensitivity,
         PidTagImportance,
-        PidLidToDoTitle, // using for tags
+        PidLidToDoTitle, // used for tags
+
         //PidNameKeywords, //for tags? not present in contansts.c | not defined multiple-string-type
         //PidLidPercentComplete, //need to add support for float properties
+
+        //not used but maybe
+        //PidTagImportance,PidTagPriority,PidLidTaskState,
+        //PidLidTaskStatusOnComplete,PidLidTaskLastUpdate,
     );
 
     public static $taskTranslationTable = array(
         PidTagNormalizedSubject     => array('field' => 'title'),
         PidTagLastModificationTime  => array('field' => 'changed', 'parsingFunc' => 'parseDate'),
-        PidTagSensitivity           => array('field' => 'sensitivity', 'parsingFunc' => 'parseSensitivity'),
         PidTagBody                  => array('field' => 'description'),
         PidLidTaskStartDate         => array('field' => 'startdate', 'parsingFunc' => 'parseDate'),
         PidLidCommonStart           => array('field' => '_startdate', 'parsingFunc' => 'parseDate'),
         PidLidTaskDueDate           => array('field' => 'date', 'parsingFunc' => 'parseDate'),
         PidLidCommonEnd             => array('field' => '_date', 'parsingFunc' => 'parseDate'),
-        PidLidTaskStatus            => array('field' => 'status'), //extra no-roundcube needed
-        PidLidTaskComplete          => array('field' => 'complete'), //extra no-roundcube needed
+        PidLidTaskComplete          => array('field' => 'complete', 'parsingFunc' => 'parseComplete'),
+        PidTagSensitivity           => array('field' => 'sensitivity', 'parsingFunc' => 'parseSensitivity'),
         PidTagImportance            => array('field' => 'flagged', 'parsingFunc' => 'parseFlag'), //must be int
         PidLidToDoTitle             => array('field' => 'tags', 'parsingFunc' => 'parseTags'),
-        //PidLidTaskState             => array('field' => '
         //PidLidPercentComplete       => array('field' => 'complete', 'parsingFunc' => 'parseProgress'),
-        //PidTagPriority              => array('field' => '
-        //PidLidTaskStatusOnComplete  => array('field' => '
-        //PidLidTaskLastUpdate        => array('field' => '
-        //PidLidTaskEstimatedEffort   => array('field' => '
-        //PidLidBusyStatus            => array('field' => 'free_busy', 'parsingFunc' => 'parseBusy'),
     );
 
 
@@ -274,7 +265,7 @@ class TasksOCParsing
     private static function parseSensitivityRc2Oc($rcSensitivity)
     {
         if ($rcSensitivity) return $rcSensitivity + 1;
-        else return $rcSensitivity;
+        else return intval($rcSensitivity);
     }
 
 
@@ -282,12 +273,12 @@ class TasksOCParsing
     // RC => Boolean (flagged ? true : false)
     private static function parseFlagOc2Rc($ocFlag)
     {
-        return ($ocFlag ? TRUE : FALSE);
+        return ($ocFlag == 2);
     }
 
     private static function parseFlagRc2Oc($rcFlag)
     {
-        return ($rcFlag ? 1 : 0);
+        return ($rcFlag ? 2 : 1);
     }
 
 
@@ -301,6 +292,19 @@ class TasksOCParsing
     private static function parseTagsRc2Oc($tagsArray)
     {
         return implode($tagsArray, ",");
+    }
+
+
+    // OC => boolean
+    // RC => a float 0..1 (meaning % done)
+    private static function parseCompleteOc2Rc($complete)
+    {
+        return $complete ? 1 : 0;
+    }
+
+    private static function parseCompleteRc2Oc($complete)
+    {
+        return $complete ? true : false;
     }
 }
 ?>
