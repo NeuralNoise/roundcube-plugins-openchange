@@ -39,7 +39,8 @@ class TasksOCParsing
         PidTagLastModificationTime,
         PidTagSensitivity,
         PidTagBody, PidTagPriority,
-        PidLidTaskStartDate, PidLidTaskDueDate,
+        PidLidTaskStartDate, PidLidCommonStart,
+        PidLidTaskDueDate, PidLidCommonEnd,
         PidLidTaskState,
         PidLidTaskStatus,
         PidLidTaskComplete, PidLidTaskStatusOnComplete,
@@ -56,7 +57,9 @@ class TasksOCParsing
         PidTagSensitivity           => array('field' => 'sensitivity', 'parsingFunc' => 'parseSensitivity'),
         PidTagBody                  => array('field' => 'description'),
         PidLidTaskStartDate         => array('field' => 'startdate', 'parsingFunc' => 'parseDate'),
+        PidLidCommonStart           => array('field' => '_startdate', 'parsingFunc' => 'parseDate'),
         PidLidTaskDueDate           => array('field' => 'date', 'parsingFunc' => 'parseDate'),
+        PidLidCommonEnd             => array('field' => '_date', 'parsingFunc' => 'parseDate'),
         PidLidTaskStatus            => array('field' => 'status'), //extra no-roundcube needed
         PidLidTaskComplete          => array('field' => 'complete'), //extra no-roundcube needed
         PidTagImportance            => array('field' => 'flagged', 'parsingFunc' => 'parseFlag'), //must be int
@@ -131,11 +134,13 @@ class TasksOCParsing
     private static function parseTaskDatesOc2Rc($task)
     {
         if (array_key_exists('date', $task)) {
+            $task['date']->setTimezone($task['_timezone']);
             $task['time'] = $task['date']->format('H:i');
             $task['date'] = $task['date']->format('Y-m-d');
         }
 
         if (array_key_exists('startdate', $task)) {
+            $task['startdate']->setTimezone($task['_timezone']);
             $task['starttime'] = $task['startdate']->format('H:i');
             $task['startdate'] = $task['startdate']->format('Y-m-d');
         }
@@ -208,26 +213,14 @@ class TasksOCParsing
 
     private static function prepareDateForParsingRc2Oc($task, $date, $time)
     {
-        $debug = new OpenchangeDebug();
-
         if (isset($task[$date]) && $task[$date]){
-            $debug->writeMessage($task[$date], 1, "DATE");
-            $debug->writeMessage($task[$time], 1, "TIME");
+            if (!isset($task[$time]))
+                $task[$time] = "00:00:00";
 
-            $newDate = new DateTime(NULL, $task['_timezone']);
-
-            $explodedDate = explode('-', $task[$date]);
-            $newDate->setDate($explodedDate[0], $explodedDate[1], $explodedDate[2]);
-
-            if (isset($task[$time])) {
-                $explodedTime = explode(':', $task[$time]);
-                $newDate->setTime($explodedTime[0], $explodedTime[1]);
-            } else
-                $newDate->setTime(0,0);
-
-            $task[$date] = $newDate;
-
-            $debug->dumpVariable($task[$date], "The date from the task");
+            $dateString = $task[$date] . " " . $task[$time];
+            $task[$date] = new DateTime($dateString, $task['_timezone']);
+            $task['_'.$date] = new DateTime($dateString, $task['_timezone']);
+            $task['_'.$date]->setTimezone(new DateTimeZone("UTC"));
         } else
             unset($task[$date]);
 
@@ -244,8 +237,12 @@ class TasksOCParsing
     // RC => DateTime
     private static function parseDateOc2Rc($unixTimestampDate)
     {
-        $parsedDate = new DateTime();
+        $parsedDate = new DateTime(NULL, new DateTimeZone("UTC"));
         $parsedDate->setTimestamp($unixTimestampDate);
+
+        //FIXME: Fix or die
+        //Adding 1hour this shouldn't be needed but only a quick fix
+        $parsedDate->add(DateInterval::createFromDateString('+1 hour'));
 
         return $parsedDate;
     }

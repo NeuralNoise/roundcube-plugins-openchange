@@ -202,11 +202,11 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
 
         foreach ($ocTasks as $ocTask) {
             $fullOcTask = TasksOCParsing::getFullTask($this->mapiSession->getFolder(), $ocTask);
+            $fullOcTask['_timezone'] = $this->plugin->timezone;
 //            $this->debug->dumpVariable($fullOcTask, "The task we get from TasksOCParsing::getFullTask");
             $parsedTask = TasksOCParsing::parseTaskOc2Rc($fullOcTask);
 //            $this->debug->dumpVariable($parsedTask, "The task we get from TasksOCParsing::parseTaskOc2Rc");
             array_push($this->tasks, $parsedTask);
-            $this->debug->writeMessage("Task with ID: " . $parsedTask['id'], 1, "ADDING");
         }
 
         unset($ocTask);
@@ -215,7 +215,6 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
 
         return $this->tasks;
     }
-
     /**
      * Return data of a specific task
      *
@@ -239,7 +238,6 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
 
         foreach ($this->tasks as $task) {
             if ($task[$query] == $prop[$query]) {
-                $this->debug->dumpVariable($task, "The task we are returning");
                 return $task;
             }
         }
@@ -410,7 +408,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
 
         $task['_timezone'] = $this->plugin->timezone;
         $properties = TasksOCParsing::parseRc2OcTask($task);
-        $this->debug->dumpVariable($properties, "The properties we parse");
+        $this->debug->dumpVariable($properties, "The properties we have parsed");
 
         $newTask = TasksOCParsing::createWithProperties($this->mapiSession->getFolder(), $properties);
         if (isset($newTask)) {
