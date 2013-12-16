@@ -224,7 +224,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
         $this->debug->writeMessage("\nStarting list_tasks");
         $this->debug->writeMessage("Filter: " . serialize($filter), 1, "PARAMETER");
 
-        if ((empty($this->tasks)) || ($filter == "force")){
+        if ((empty($this->tasks)) || ($filter['special'] == "force")){
             $table = $this->mapiSession->getFolder()->getMessageTable();
             $ocTasks = $table->getMessages();
 
@@ -235,9 +235,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
             foreach ($ocTasks as $ocTask) {
                 $fullOcTask = TasksOCParsing::getFullTask($this->mapiSession->getFolder(), $ocTask);
                 $fullOcTask['_timezone'] = $this->plugin->timezone;
-    //            $this->debug->dumpVariable($fullOcTask, "The task we get from TasksOCParsing::getFullTask");
                 $parsedTask = TasksOCParsing::parseTaskOc2Rc($fullOcTask);
-    //            $this->debug->dumpVariable($parsedTask, "The task we get from TasksOCParsing::parseTaskOc2Rc");
                 array_push($this->tasks, $parsedTask);
             }
 
@@ -247,6 +245,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
         }
 
         $this->filterTasks($filter);
+        $this->debug->writeMessage("The number of tasks we return after filtering: " . count($this->tasks) . "");
 
         return $this->tasks;
     }
@@ -309,7 +308,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
             $query = 'uid';
         }
 
-        $this->list_tasks("force");
+        $this->list_tasks(array('special' => 'force'));
 
         foreach ($this->tasks as $task) {
             if ($task[$query] == $prop[$query]) {
