@@ -40,7 +40,6 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     private $list_ids = '';
 
     private $createdTaskId = "";
-    private $forceUpdate = false;
 
     private $debug;
     private $username;
@@ -223,8 +222,9 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     function list_tasks($filter, $lists = null)
     {
         $this->debug->writeMessage("\nStarting list_tasks");
+        $this->debug->writeMessage("Filter: " . serialize($filter), 1, "PARAMETER");
 
-        if ((empty($this->tasks)) || ($this->forceUpdate)){
+        if ((empty($this->tasks)) || ($filter == "force")){
             $table = $this->mapiSession->getFolder()->getMessageTable();
             $ocTasks = $table->getMessages();
 
@@ -246,7 +246,49 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
             unset($table);
         }
 
+        $this->filterTasks($filter);
+
         return $this->tasks;
+    }
+
+    private function filterTasks($filter)
+    {
+        foreach ($this->tasks as $key => $task) {
+            $removeTask = false;
+
+            $removeTask = $removeTask ||
+                ($filter['from'] && ($task['date'] < $filter['from']));
+
+            $removeTask = $removeTask ||
+                ($filter['to'] && ($task['date'] > $filter['to']));
+
+            if ($filter['mask']) {
+                //special case, not only today tasks, but future ones (from database driver)
+                $removeTask = $removeTask ||
+                    (($filter['mask'] & tasklist::FILTER_MASK_TODAY) && ($task['date'] < date('Y-m-d',0)));
+
+                $removeTask = $removeTask ||
+                    (($filter['mask'] & tasklist::FILTER_MASK_NODATE) && $task['date']);
+
+                $removeTask = $removeTask ||
+                    (($filter['mask'] & tasklist::FILTER_MASK_COMPLETE) && !$task['complete']);
+
+                $removeTask = $removeTask ||
+                    (($filter['mask'] & tasklist::FILTER_MASK_FLAGGED) && !$task['flagged']);
+            }
+
+            if ($filter['search']) {
+                $matchSearch = false;
+
+                foreach (array('title','description','organizer','attendees') as $field) {
+                    $matchSearch = $matchSearch && (strpos($task[$field], $filter['search']) !== FALSE);
+                }
+
+                $removeTask = $removeTask || $matchSearch;
+            }
+
+            if ($removeTask) unset($this->tasks[$key]);
+        }
     }
     /**
      * Return data of a specific task
@@ -267,10 +309,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
             $query = 'uid';
         }
 
-        //using a attribute instead of a parameter to avoid changing the abstract function def
-        $this->forceUpdate = true;
-        $this->list_tasks("");
-        $this->forceUpdate = false;
+        $this->list_tasks("force");
 
         foreach ($this->tasks as $task) {
             if ($task[$query] == $prop[$query]) {
