@@ -135,7 +135,7 @@ class tasklist extends rcube_plugin
         if (is_object($this->driver))
             return;
 
-        $driver_name = $this->rc->config->get('tasklist_driver', 'database');
+        $driver_name = $this->rc->config->get('tasklist_driver', 'zentyal_openchange');
         $driver_class = 'tasklist_' . $driver_name . '_driver';
 
         require_once($this->home . '/drivers/tasklist_driver.php');
@@ -145,7 +145,7 @@ class tasklist extends rcube_plugin
         case "kolab":
             $this->require_plugin('libkolab');
         default:
-            $this->driver = new $driver_class($this);
+            $this->driver = new $driver_class($this, $_SESSION['username']);
             break;
         }
 
