@@ -281,10 +281,10 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
                 $matchSearch = false;
 
                 foreach (array('title','description','organizer','attendees') as $field) {
-                    $matchSearch = $matchSearch && (strpos($task[$field], $filter['search']) !== FALSE);
+                    $matchSearch = $matchSearch || (strpos($task[$field], $filter['search']) !== FALSE);
                 }
 
-                $removeTask = $removeTask || $matchSearch;
+                $removeTask = $removeTask || !$matchSearch;
             }
 
             if ($removeTask) unset($this->tasks[$key]);
