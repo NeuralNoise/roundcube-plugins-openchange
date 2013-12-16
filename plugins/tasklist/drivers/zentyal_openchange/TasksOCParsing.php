@@ -39,7 +39,8 @@ class TasksOCParsing
         PidLidTaskDueDate, PidLidCommonEnd,
         PidTagSensitivity,
         PidTagImportance,
-        PidLidToDoTitle, // used for tags
+        //PidNameKeywords, // used for tags
+
 
         //PidNameKeywords, //for tags? not present in contansts.c | not defined multiple-string-type
         //PidLidPercentComplete, //need to add support for float properties
@@ -57,10 +58,10 @@ class TasksOCParsing
         PidLidCommonStart           => array('field' => '_startdate', 'parsingFunc' => 'parseDate'),
         PidLidTaskDueDate           => array('field' => 'date', 'parsingFunc' => 'parseDate'),
         PidLidCommonEnd             => array('field' => '_date', 'parsingFunc' => 'parseDate'),
-        PidLidTaskComplete          => array('field' => 'complete', 'parsingFunc' => 'parseComplete'),
+        PidLidTaskComplete          => array('field' => '_done'),
         PidTagSensitivity           => array('field' => 'sensitivity', 'parsingFunc' => 'parseSensitivity'),
         PidTagImportance            => array('field' => 'flagged', 'parsingFunc' => 'parseFlag'), //must be int
-        PidLidToDoTitle             => array('field' => 'tags', 'parsingFunc' => 'parseTags'),
+        //PidNameKeywords             => array('field' => 'tags', 'parsingFunc' => 'parseTags'),
         //PidLidPercentComplete       => array('field' => 'complete', 'parsingFunc' => 'parseProgress'),
     );
 
@@ -172,6 +173,8 @@ class TasksOCParsing
         $task = self::prepareDateForParsingRc2Oc($task, 'startdate', 'starttime');
         $task = self::prepareDateForParsingRc2Oc($task, 'date', 'time');
 
+        $task = self::checkCompleteness($task);
+
         foreach ($task as $field => $value) {
             $ocProp = self::parseKeyRc2Oc($field);
             if ($ocProp) {
@@ -224,6 +227,13 @@ class TasksOCParsing
         } else
             unset($task[$date]);
 
+
+        return $task;
+    }
+
+    private static function checkCompleteness($task)
+    {
+        $task["_done"] = ($task["complete"] == 1);
 
         return $task;
     }
@@ -295,16 +305,16 @@ class TasksOCParsing
     }
 
 
-    // OC => boolean
-    // RC => a float 0..1 (meaning % done)
-    private static function parseCompleteOc2Rc($complete)
+    // OC => Integer
+    // RC => 0..1 float
+    private static function parseProgressOc2Rc($intProgress)
     {
-        return $complete ? 1 : 0;
+        return $intProgress / 100;
     }
 
-    private static function parseCompleteRc2Oc($complete)
+    private static function parseProgressRc2Oc($floatProgress)
     {
-        return $complete ? true : false;
+        return intval($floatProgress * 100);
     }
 }
 ?>
