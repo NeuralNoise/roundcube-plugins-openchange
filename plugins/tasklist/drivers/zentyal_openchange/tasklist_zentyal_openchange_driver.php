@@ -40,6 +40,7 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     private $list_ids = '';
 
     private $createdTaskId = "";
+    private $forceUpdate = false;
 
     private $debug;
     private $username;
@@ -175,6 +176,36 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     {
         $this->debug->writeMessage("\nStarting count_tasks");
 
+        //getting today and tomorrow dates in Y-m-day format
+        $today_date = new DateTime('now', $this->plugin->timezone);
+        $today = $today_date->format('Y-m-d');
+        $tomorrow_date = new DateTime('now + 1 day', $this->plugin->timezone);
+        $tomorrow = $tomorrow_date->format('Y-m-d');
+
+        $this->list_tasks("");
+
+        $counts = array('all' => 0, 'flagged' => 0, 'today' => 0, 'tomorrow' => 0, 'overdue' => 0, 'nodate' => 0);
+        foreach ($this->tasks as $task) {
+            $counts['all']++;
+
+            if ($task['flagged'])
+                $counts['flagged']++;
+
+            if (empty($task['date']))
+                $counts['nodate']++;
+
+            else if ($task['date'] == $today)
+                $counts['today']++;
+
+            else if ($task['date'] == $tomorrow)
+                $counts['tomorrow']++;
+
+            else if ($task['date'] < $today)
+                $counts['overdue']++;
+        }
+
+        $this->debug->writeMessage(serialize($counts), 1, "COUNTS");
+
         return $counts;
     }
 
@@ -193,25 +224,27 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
     {
         $this->debug->writeMessage("\nStarting list_tasks");
 
-        $table = $this->mapiSession->getFolder()->getMessageTable();
-        $ocTasks = $table->getMessages();
+        if ((empty($this->tasks)) || ($this->forceUpdate)){
+            $table = $this->mapiSession->getFolder()->getMessageTable();
+            $ocTasks = $table->getMessages();
 
-        $this->debug->writeMessage("The number of tasks in the table is: " . count($ocTasks) . "");
+            $this->debug->writeMessage("The number of tasks in the table is: " . count($ocTasks) . "");
 
-        $this->tasks = array();
+            $this->tasks = array();
 
-        foreach ($ocTasks as $ocTask) {
-            $fullOcTask = TasksOCParsing::getFullTask($this->mapiSession->getFolder(), $ocTask);
-            $fullOcTask['_timezone'] = $this->plugin->timezone;
-//            $this->debug->dumpVariable($fullOcTask, "The task we get from TasksOCParsing::getFullTask");
-            $parsedTask = TasksOCParsing::parseTaskOc2Rc($fullOcTask);
-//            $this->debug->dumpVariable($parsedTask, "The task we get from TasksOCParsing::parseTaskOc2Rc");
-            array_push($this->tasks, $parsedTask);
+            foreach ($ocTasks as $ocTask) {
+                $fullOcTask = TasksOCParsing::getFullTask($this->mapiSession->getFolder(), $ocTask);
+                $fullOcTask['_timezone'] = $this->plugin->timezone;
+    //            $this->debug->dumpVariable($fullOcTask, "The task we get from TasksOCParsing::getFullTask");
+                $parsedTask = TasksOCParsing::parseTaskOc2Rc($fullOcTask);
+    //            $this->debug->dumpVariable($parsedTask, "The task we get from TasksOCParsing::parseTaskOc2Rc");
+                array_push($this->tasks, $parsedTask);
+            }
+
+            unset($ocTask);
+            unset($ocTasks);
+            unset($table);
         }
-
-        unset($ocTask);
-        unset($ocTasks);
-        unset($table);
 
         return $this->tasks;
     }
@@ -234,7 +267,10 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
             $query = 'uid';
         }
 
+        //using a attribute instead of a parameter to avoid changing the abstract function def
+        $this->forceUpdate = true;
         $this->list_tasks("");
+        $this->forceUpdate = false;
 
         foreach ($this->tasks as $task) {
             if ($task[$query] == $prop[$query]) {
