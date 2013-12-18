@@ -59,7 +59,8 @@ body.attachmentwin #topnav .topright {
 
 #tasklistsbox {
 	position: absolute;
-	top: 300px;
+	//top: 300px;
+	top: 42px;
 	left: 0;
 	width: 100%;
 	bottom: 0px;

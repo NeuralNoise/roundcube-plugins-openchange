@@ -35,7 +35,7 @@ class TasksOCParsing
         PidTagLastModificationTime,
         PidTagBody,
         PidLidTaskStartDate, PidLidCommonStart,
-        PidLidTaskComplete,
+        PidLidTaskComplete, PidLidTaskStatus,
         PidLidTaskDueDate, PidLidCommonEnd,
         PidTagSensitivity,
         PidTagImportance,
@@ -59,6 +59,7 @@ class TasksOCParsing
         PidLidTaskDueDate           => array('field' => 'date', 'parsingFunc' => 'parseDate'),
         PidLidCommonEnd             => array('field' => '_date', 'parsingFunc' => 'parseDate'),
         PidLidTaskComplete          => array('field' => '_done'),
+        PidLidTaskStatus            => array('field' => '_status'),
         PidTagSensitivity           => array('field' => 'sensitivity', 'parsingFunc' => 'parseSensitivity'),
         PidTagImportance            => array('field' => 'flagged', 'parsingFunc' => 'parseFlag'), //must be int
         //PidNameKeywords             => array('field' => 'tags', 'parsingFunc' => 'parseTags'),
@@ -96,6 +97,7 @@ class TasksOCParsing
         }
 
         $rcTask = self::parseTaskDatesOc2Rc($rcTask);
+        $rcTask = self::parseCompletenessOc2Rc($rcTask);
 
         return $rcTask;
     }
@@ -136,6 +138,14 @@ class TasksOCParsing
             $task['starttime'] = $task['startdate']->format('H:i');
             $task['startdate'] = $task['startdate']->format('Y-m-d');
         }
+
+        return $task;
+    }
+
+    private static function parseCompletenessOc2Rc($task)
+    {
+        if ($task['_status'] == 2 || $task['_done'])
+            $task['complete'] = 1;
 
         return $task;
     }
@@ -240,9 +250,17 @@ class TasksOCParsing
         return $date . " " . $time;
     }
 
+    // To set a complete flag in OC we also need to set the status of the given task
+    // as complete (0x00000002)
     private static function checkCompleteness($task)
     {
-        $task["_done"] = ($task["complete"] == 1);
+        if ($task["complete"] == 1) {
+            $task["_done"] = true;
+            $task["_status"] = 2;
+        } else {
+            $task["_done"] = false;
+            $task["_status"] = 0;
+        }
 
         return $task;
     }

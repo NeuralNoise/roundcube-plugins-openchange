@@ -625,7 +625,7 @@ function rcube_tasklist_ui(settings)
             '<a href="#" class="actions">V</a>'
             )
             .data('id', rec.id)
-            .draggable({
+            /*.draggable({
                 revert: 'invalid',
                 addClasses: false,
                 cursorAt: { left:-10, top:12 },
@@ -634,7 +634,7 @@ function rcube_tasklist_ui(settings)
                 start: draggable_start,
                 stop: draggable_stop,
                 revertDuration: 300
-            });
+            })*/;
 
         if (rec.complete == 1.0)
             div.addClass('complete');
