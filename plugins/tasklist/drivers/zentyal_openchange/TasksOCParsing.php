@@ -217,10 +217,8 @@ class TasksOCParsing
     private static function prepareDateForParsingRc2Oc($task, $date, $time)
     {
         if (isset($task[$date]) && $task[$date]){
-            if (!isset($task[$time]))
-                $task[$time] = "00:00:00";
+            $dateString = self::buildDateString($task[$date], $task[$time]);
 
-            $dateString = $task[$date] . " " . $task[$time];
             $task[$date] = new DateTime($dateString, $task['_timezone']);
             $task['_'.$date] = new DateTime($dateString, $task['_timezone']);
             $task['_'.$date]->setTimezone(new DateTimeZone("UTC"));
@@ -229,6 +227,17 @@ class TasksOCParsing
 
 
         return $task;
+    }
+
+    private static function buildDateString($date, $time)
+    {
+        if (!isset($time))
+            $time = "00:00";
+
+        $explodedTime = explode(":", $time);
+        $time = (intval($explodedTime[0]) % 24) . ":" . (intval($explodedTime[1]) % 60);
+
+        return $date . " " . $time;
     }
 
     private static function checkCompleteness($task)
