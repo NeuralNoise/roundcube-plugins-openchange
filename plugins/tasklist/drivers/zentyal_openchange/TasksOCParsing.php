@@ -36,17 +36,15 @@ class TasksOCParsing
         PidTagBody,
         PidLidTaskStartDate, PidLidCommonStart,
         PidLidTaskComplete, PidLidTaskStatus,
+        PidLidPercentComplete,
         PidLidTaskDueDate, PidLidCommonEnd,
         PidTagSensitivity,
         PidTagImportance,
-        //PidNameKeywords, // used for tags
-
 
         //PidNameKeywords, //for tags? not present in contansts.c | not defined multiple-string-type
-        //PidLidPercentComplete, //need to add support for float properties
 
         //not used but maybe
-        //PidTagImportance,PidTagPriority,PidLidTaskState,
+        //PidLidTaskState,
         //PidLidTaskStatusOnComplete,PidLidTaskLastUpdate,
     );
 
@@ -60,10 +58,10 @@ class TasksOCParsing
         PidLidCommonEnd             => array('field' => '_date', 'parsingFunc' => 'parseDate'),
         PidLidTaskComplete          => array('field' => '_done'),
         PidLidTaskStatus            => array('field' => '_status'),
+        PidLidPercentComplete       => array('field' => 'complete'),
         PidTagSensitivity           => array('field' => 'sensitivity', 'parsingFunc' => 'parseSensitivity'),
         PidTagImportance            => array('field' => 'flagged', 'parsingFunc' => 'parseFlag'), //must be int
         //PidNameKeywords             => array('field' => 'tags', 'parsingFunc' => 'parseTags'),
-        //PidLidPercentComplete       => array('field' => 'complete', 'parsingFunc' => 'parseProgress'),
     );
 
 
@@ -329,19 +327,6 @@ class TasksOCParsing
     private static function parseTagsRc2Oc($tagsArray)
     {
         return implode($tagsArray, ",");
-    }
-
-
-    // OC => Integer
-    // RC => 0..1 float
-    private static function parseProgressOc2Rc($intProgress)
-    {
-        return $intProgress / 100;
-    }
-
-    private static function parseProgressRc2Oc($floatProgress)
-    {
-        return intval($floatProgress * 100);
     }
 }
 ?>
