@@ -109,20 +109,22 @@ class zentyal_openchange_driver extends calendar_driver
     {
         $this->debug->writeMessage("\nStarting _read_calendars\n");
 
-        $cal_id = $this->mapiSession->getFolder()->getID();
-        $calendar['showalarms'] = false;
-        $calendar['active'] = true;
-        $calendar['name'] = $this->mapiSession->getFolder()->getName();
-        $calendar['id'] = $cal_id;
-        $calendar['calendar_id'] = $cal_id;
-        $calendar['user_id'] = $this->rc->user->ID;
-        $calendar['readonly'] = false;
+        if ($this->mapiSession->sessionStarted) {
+            $cal_id = $this->mapiSession->getFolder()->getID();
+            $calendar['showalarms'] = false;
+            $calendar['active'] = true;
+            $calendar['name'] = $this->mapiSession->getFolder()->getName();
+            $calendar['id'] = $cal_id;
+            $calendar['calendar_id'] = $cal_id;
+            $calendar['user_id'] = $this->rc->user->ID;
+            $calendar['readonly'] = false;
 
-        $calendar_ids = array();
-        array_push($calendar_ids, $calendar['id']);
+            $calendar_ids = array();
+            array_push($calendar_ids, $calendar['id']);
 
-        $this->calendars[$calendar['calendar_id']] = $calendar;
-        $this->calendar_ids = join(',', $calendar_ids);
+            $this->calendars[$calendar['calendar_id']] = $calendar;
+            $this->calendar_ids = join(',', $calendar_ids);
+        }
 
         $this->debug->writeMessage("The calendar ids are: " . $this->calendar_ids . "\n");
 
@@ -142,38 +144,40 @@ class zentyal_openchange_driver extends calendar_driver
     public function list_calendars($active = false, $personal = false)
     {
         $this->debug->writeMessage("\nStarting list_calendars\n");
-        // attempt to create a default calendar for this user
-        if (empty($this->calendars)) {
-            $this->_read_calendars();
-        }
-
-        $calendars = $this->calendars;
-
-        $this->debug->writeMessage("All the calendars to show are: \n");
-        foreach ($this->calendars as $key => $calc) {
-            $this->debug->writeMessage("For the key: " . $key . "\n");
-            try {
-                $this->debug->writeMessage(serialize($calc) . "\n");
-            } catch(Exception $e){
+        if ($this->mapiSession->sessionStarted) {
+            // attempt to create a default calendar for this user
+            if (empty($this->calendars)) {
+                $this->_read_calendars();
             }
-        }
 
-        // If there is no color assigned to a calendar, generate it
-        $this->checkAndGetCalendarsColor();
+            $calendars = $this->calendars;
 
-        $this->debug->writeMessage("How many cals: " . count($calendars) . "\n");
+            $this->debug->writeMessage("All the calendars to show are: \n");
+            foreach ($this->calendars as $key => $calc) {
+                $this->debug->writeMessage("For the key: " . $key . "\n");
+                try {
+                    $this->debug->writeMessage(serialize($calc) . "\n");
+                } catch(Exception $e){
+                }
+            }
 
-        // filter active calendars
-        if ($active) {
-            foreach ($calendars as $idx => $cal) {
-                if (!$cal['active']) {
-                    unset($calendars[$idx]);
+            // If there is no color assigned to a calendar, generate it
+            $this->checkAndGetCalendarsColor();
+
+            $this->debug->writeMessage("How many cals: " . count($calendars) . "\n");
+
+            // filter active calendars
+            if ($active) {
+                foreach ($calendars as $idx => $cal) {
+                    if (!$cal['active']) {
+                        unset($calendars[$idx]);
+                    }
                 }
             }
         }
         $this->debug->writeMessage("Ending list_calendars\n");
 
-        return $calendars;
+        return $this->mapiSession->sessionStarted ? $calendars : array();
     }
 
     /**
