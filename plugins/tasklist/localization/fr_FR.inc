@@ -66,3 +66,6 @@ $labels['invalidstartduedates'] = 'La date de début ne doit pas être supérieu
 $labels['deletetasktconfirm'] = 'Êtes-vous sur de vouloir supprimer cette tâche?';
 $labels['deleteparenttasktconfirm'] = 'Êtes-vous sur de vouloir supprimer cette tâche et ses sous-tâches?';
 $labels['deletelistconfirm'] = 'Êtes-vous sur de vouloir supprimer cette liste et toutes ses tâches?';
+
+// zentyal custom
+$labels['openchangeerror'] = 'Impossible de se connecter au serveur de Openchange';

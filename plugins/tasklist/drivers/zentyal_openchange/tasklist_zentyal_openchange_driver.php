@@ -82,6 +82,8 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
             $list['readonly'] = false;
 
             $this->lists[$list['id']] = $list;
+        } else if ($this->rc->task == 'tasks') {
+            $this->rc->output->command('display_message', $this->plugin->gettext('openchangeerror'), 'notice');
         }
 
         $this->debug->writeMessage("The list ids are:" . serialize($this->lists) . "");
