@@ -31,7 +31,6 @@ class zentyal_oc_login extends rcube_plugin
         $this->load_config();
 
         $this->add_hook('login_after', array($this, 'checkMapiProfile'));
-        //to perform a logout it's only needed a GET request to /?_task=logout
     }
 
     function checkMapiProfile($args)
@@ -44,22 +43,18 @@ class zentyal_oc_login extends rcube_plugin
         $mapiSession = new MapiSessionHandler();
         $profileCreated = $mapiSession->getProfile($user, $password);
 
-        /* As we can set $args['task'] and $args['action'] (and other URL params) we can redirect here to
-         * wherever we want
-         * If we want a custom logout, search for => $OUTPUT->show_message('loggedout');
-         */
-
         if (!$profileCreated) {
-            $args['_task'] = "logout";
+            $args['_task'] = "login";
             $args['_user'] = $user;
-            $this->debug_msg("Something went wrong. Redirecting to logout task.\n");
+
+            $this->rc->output->show_message("Can't create user profile.");
+            $this->rc->logout_actions();
+            $this->rc->kill_session();
+            $this->debug->writeMessage("Can't create user profile. Possible causes:", 0, "login");
+            $this->debug->writeMessage("Openchange server could be not responding.", 1);
+            $this->debug->writeMessage("Can't write user profile.", 1);
         }
 
         return $args;
-    }
-
-    private function is_localhost()
-    {
-        return $_SERVER['REMOTE_ADDR'] == '::1' || $_SERVER['REMOTE_ADDR'] == '127.0.0.1';
     }
 }
