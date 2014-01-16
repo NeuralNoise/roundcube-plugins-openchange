@@ -36,4 +36,7 @@ $labels['description'] = 'Descripcion';
 $labels['all-day'] = 'dia-completo';
 $labels['export'] = 'Exportar a ICS';
 $labels['category'] = 'Categoria';
+
+// zentyal custom
+$labels['openchangeerror'] = 'Error al conectar con el servidor Openchange';
 ?>
