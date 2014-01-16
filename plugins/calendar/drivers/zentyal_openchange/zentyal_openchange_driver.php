@@ -174,7 +174,10 @@ class zentyal_openchange_driver extends calendar_driver
                     }
                 }
             }
+        } else if ($this->rc->task == 'calendar') {
+            $this->rc->output->command('display_message', $this->cal->gettext('openchangeerror'), 'notice');
         }
+
         $this->debug->writeMessage("Ending list_calendars\n");
 
         return $this->mapiSession->sessionStarted ? $calendars : array();
