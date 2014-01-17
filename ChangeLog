@@ -1,0 +1,5 @@
+HEAD
+	+ Added exception handling when Openchange server is not available
+	+ Added tasks manage plugin
+0.1.9
+	+ First public release
