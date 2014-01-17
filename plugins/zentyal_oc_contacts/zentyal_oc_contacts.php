@@ -16,6 +16,7 @@
         {
             $this->rc = rcmail::get_instance();
             $this->load_config();
+            $this->add_texts('localization/', true);
             $this->add_hook('addressbooks_list', array($this, 'get_all_addressbooks'));
             $this->add_hook('addressbook_get', array($this, 'get_address_book'));
         }
@@ -81,7 +82,7 @@
         {
             $username = $_SESSION['username'];
 
-            $args['instance'] = new OpenchangeAddressbook($args['id'], $username);
+            $args['instance'] = new OpenchangeAddressbook($this, $args['id'], $username);
 
             return $args;
         }

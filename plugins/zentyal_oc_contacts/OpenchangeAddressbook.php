@@ -39,12 +39,14 @@ class OpenchangeAddressbook extends rcube_addressbook
             'jobtitle', 'organization', 'department', 'email', 'phone', 'address',
             'website', 'im', 'notes', 'photo');
 
-    public function __construct($id, $username)
+    public function __construct($plugin, $id, $username)
     {
         $this->ready = true;
         $this->name = "Contacts";
 
         $this->rc = rcmail::get_instance();
+        $this->plugin = $plugin;
+
         $this->primary_key = $id;
         $this->groups = false;
         $this->readonly = false;
@@ -52,6 +54,8 @@ class OpenchangeAddressbook extends rcube_addressbook
         $this->debug = new OpenchangeDebug();
         $this->debug->writeMessage( "\nStarting the constructor\n");
         $this->debug->writeMessage("ID: " . $id . " | profileName: " . $username . "\n");
+
+        $this->contacts = array();
 
         //Creating the OC binding
         if (OpenchangeConfig::$useCachedSessions) {
@@ -71,8 +75,11 @@ class OpenchangeAddressbook extends rcube_addressbook
 
 
         // Fisrt contact fetching
-        $this->contacts = array();
-        $this->fetchOcContacts();
+        if ($this->mapiSession->sessionStarted) {
+            $this->fetchOcContacts();
+        } else {
+            $this->rc->output->command('display_message', $this->plugin->gettext('openchangeerror'), 'notice');
+        }
     }
 
     private function fetchOcContacts()
