@@ -227,4 +227,6 @@ $labels['futurevents'] = 'Cette occurrence et toutes les suivantes';
 $labels['allevents'] = 'Toutes les occurrences';
 $labels['saveasnew'] = 'Enregistrer comme un nouvel évènement';
 
+// zentyal custom
+$labels['openchangeerror'] = 'Impossible de se connecter au serveur de Openchange';
 ?>

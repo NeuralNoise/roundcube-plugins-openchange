@@ -16,7 +16,8 @@ class MapiSessionHandler
 {
     private $debug;
 
-    private $sessionStarted = false;
+    // Used to flag the success of the given connection
+    public $sessionStarted = false;
 
     private $profileDB;
     private $mapiProfile;
@@ -66,9 +67,7 @@ class MapiSessionHandler
                 $this->debug->writeMessage("Folder " . $folder . " retrieved", 0, "5");
                 $this->sessionStarted = true;
             } catch (Exception $e) {
-                $this->debug->writeMessage("Exception catched", 0, "EXCEPTION");
-                ob_start();var_dump($e);
-                $this->debug->writeMessage(ob_get_clean());
+                $this->debug->writeMessage("Exception catched => " . $e->getMessage(), 0, "EXCEPTION");
             }
         }
     }
@@ -107,11 +106,13 @@ class MapiSessionHandler
     }
 
     public function getFolder() {
-        return $this->folder;
+        if ($this->sessionStarted)
+            return $this->folder;
     }
 
     public function getMailbox() {
-        return $this->mailbox;
+        if ($this->sessionStarted)
+            return $this->mailbox;
     }
 
     /**

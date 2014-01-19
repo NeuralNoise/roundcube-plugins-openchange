@@ -67,23 +67,26 @@ class tasklist_zentyal_openchange_driver extends tasklist_driver
      */
     private function _read_lists()
     {
-      $this->debug->writeMessage("\nStarting _read_lists");
+        $this->debug->writeMessage("\nStarting _read_lists");
 
-      $hidden = array_filter(explode(',', $this->rc->config->get('hidden_tasklists', '')));
+        $hidden = array_filter(explode(',', $this->rc->config->get('hidden_tasklists', '')));
+        if ($this->mapiSession->sessionStarted) {
+            $list_id = $this->mapiSession->getFolder()->getID();
+            $list['id'] = $list_id;
+            //Should we use a html::quote for the name?
+            $list['name'] = $this->mapiSession->getFolder()->getName();
+            $list['showalarms'] = false;
+            $list['active'] = true;
+            $list['user_id'] = $this->rc->user->ID;
+            $list['editable'] = true;
+            $list['readonly'] = false;
 
-      $list_id = $this->mapiSession->getFolder()->getID();
-      $list['id'] = $list_id;
-      //Should we use a html::quote for the name?
-      $list['name'] = $this->mapiSession->getFolder()->getName();
-      $list['showalarms'] = false;
-      $list['active'] = true;
-      $list['user_id'] = $this->rc->user->ID;
-      $list['editable'] = true;
-      $list['readonly'] = false;
+            $this->lists[$list['id']] = $list;
+        } else if ($this->rc->task == 'tasks') {
+            $this->rc->output->command('display_message', $this->plugin->gettext('openchangeerror'), 'notice');
+        }
 
-      $this->lists[$list['id']] = $list;
-
-      $this->debug->writeMessage("The list ids are:" . serialize($this->lists) . "");
+        $this->debug->writeMessage("The list ids are:" . serialize($this->lists) . "");
     }
 
     /**

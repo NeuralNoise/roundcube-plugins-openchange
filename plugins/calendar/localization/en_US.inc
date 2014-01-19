@@ -233,4 +233,6 @@ $labels['futurevents'] = 'Future';
 $labels['allevents'] = 'All';
 $labels['saveasnew'] = 'Save as new';
 
+// zentyal custom
+$labels['openchangeerror'] = 'Error while connecting to the Openchange server.';
 ?>
