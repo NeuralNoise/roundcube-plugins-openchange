@@ -1,4 +1,6 @@
 HEAD
+	+ Added package dependency so exception and tasks handling is available
+	  at php-openchange package
 	+ Added exception handling when Openchange server is not available
 	+ Added tasks manage plugin
 0.1.9
