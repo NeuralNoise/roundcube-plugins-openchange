@@ -7,7 +7,7 @@ Standards-Version: 3.9.2
 
 Package: roundcube-plugins-openchange
 Architecture: all
-Depends: roundcube-core (>= 0.9.3), ${misc:Depends}, php5-openchange, php5-ldap
+Depends: roundcube-core (>= 0.9.3), ${misc:Depends}, php5-openchange (>= 2:2.0+zentyal2), php5-ldap
 Description: roundcube plugins for OpenChange
  This package provides several plugins for Roundcube. They should be
  enabled in the configuration of Roundcube.
