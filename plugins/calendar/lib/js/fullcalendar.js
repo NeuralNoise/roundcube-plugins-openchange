@@ -731,9 +731,9 @@ function Header(calendar, options) {
 		tm = options.theme ? 'ui' : 'fc';
 		var sections = options.header;
 		if (sections) {
-			element = $("<table class='fc-header' style='width:100%'/>")
+			element = $("<div class='fc-header' style='width:100%'>")
 				.append(
-					$("<tr/>")
+					$("<div>")
 						.append(renderSection('left'))
 						.append(renderSection('center'))
 						.append(renderSection('right'))
@@ -749,7 +749,7 @@ function Header(calendar, options) {
 	
 	
 	function renderSection(position) {
-		var e = $("<td class='fc-header-" + position + "'/>");
+		var e = $("<div class='fc-header-" + position + "'>");
 		var buttonStr = options.header[position];
 		if (buttonStr) {
 			$.each(buttonStr.split(' '), function(i) {
